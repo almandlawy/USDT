@@ -6,6 +6,8 @@ import { PrelaunchBanner } from "@/components/ui/prelaunch-banner";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDictionary, isLocale } from "@/lib/i18n/dictionaries";
 import { notFound } from "next/navigation";
+import { getMarketSnapshot } from "@/lib/market-data";
+import { MarketTicker } from "@/components/marketing/market-ticker";
 
 export default async function MarketingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -14,6 +16,7 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
   const dict = getDictionary(locale);
   const ar = locale === "ar";
   const Arrow = ar ? ArrowUpLeft : ArrowUpRight;
+  const market=await getMarketSnapshot();
   const features = ar ? [
     [Fingerprint, "هوية موثقة", "تسجيل آمن، OTP، 2FA، ومسار KYC للأفراد والشركات."],
     [Workflow, "طلبات واضحة", "شراء وبيع وP2P مع مرجع موحد وحالة زمنية كاملة."],
@@ -25,7 +28,7 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
     [ScanLine, "Private evidence", "Encrypted files, temporary links and review with resubmission support."],
     [ShieldCheck, "Built-in compliance", "Least privilege, risk alerts and an immutable audit trail."],
   ];
-  return <><PrelaunchBanner locale={locale}/><MarketingHeader locale={locale} dict={dict}/><main>
+  return <><PrelaunchBanner locale={locale}/><MarketingHeader locale={locale} dict={dict}/><MarketTicker locale={locale} initial={market}/><main>
     <section className="heroSection"><div className="orb cyanOrb"/><div className="orb goldOrb"/><div className="shell heroGrid"><div className="heroCopy"><StatusBadge tone="warning">{dict.hero.badge}</StatusBadge><h1>{dict.hero.titleA}<span>{dict.hero.titleB}</span></h1><p>{dict.hero.text}</p><div className="heroActions"><Link className="primaryButton" href={`/${locale}/register`}>{dict.hero.primary}<Arrow size={18}/></Link><a className="secondaryButton" href="#security"><ShieldCheck size={18}/>{dict.hero.secondary}</a></div><div className="trustRow"><span><CircleCheck/> {ar ? "لا تنفيذ مالي حقيقي" : "No real financial execution"}</span><span><CircleCheck/> {ar ? "RLS وتخزين خاص" : "RLS & private storage"}</span><span><CircleCheck/> {ar ? "سجل تدقيق" : "Audit trail"}</span></div></div>
       <div className="heroConsole"><div className="consoleTop"><div className="consoleDots"><i/><i/><i/></div><span>GULF GATE / REQUEST CONTROL</span><LockKeyhole size={16}/></div><div className="consoleBody"><div className="systemStatus"><span><i/> {ar ? "النظام" : "System"}</span><strong>{ar ? "قبل الإطلاق" : "Pre-launch"}</strong></div><div className="consoleAmount"><small>{ar ? "قيمة الطلب التجريبي" : "DEMO REQUEST VALUE"}</small><strong>$25,000.00</strong><span>≈ 91,812.50 AED</span></div><div className="flowTrack"><div className="complete"><b>1</b><span>{ar ? "الهوية" : "Identity"}</span></div><div className="active"><b>2</b><span>{ar ? "المراجعة" : "Review"}</span></div><div><b>3</b><span>{ar ? "الموافقة" : "Approval"}</span></div><div className="locked"><b><LockKeyhole size={12}/></b><span>{ar ? "التنفيذ" : "Execution"}</span></div></div><div className="consoleGrid"><div><Network/><span>TRC20 / ERC20</span><small>{ar ? "الشبكات المدعومة" : "Supported networks"}</small></div><div><TimerReset/><span>10:00</span><small>{ar ? "صلاحية عرض السعر" : "Quote validity"}</small></div></div><div className="lockedAction"><LockKeyhole/><span><b>LIVE_TRADING=false</b>{ar ? "الإيداع والتحويل وإطلاق الأصل مقفول" : "Deposits, transfers and release are locked"}</span></div></div></div>
     </div></section>
