@@ -68,7 +68,18 @@ export async function registerAction(formData: FormData) {
     },
   };
   const { data, error } = await supabase.auth.signUp({ email: identifier, password, options });
-  if (error) authError(locale, "register", "registration_failed");
+
+  if (error) {
+    const alreadyRegistered = /already\s*registered|already\s*exists|user_already_exists/i.test(
+      `${error.code || ""} ${error.message || ""}`,
+    );
+    if (alreadyRegistered) {
+      const existing = await supabase.auth.signInWithPassword({ email: identifier, password });
+      if (!existing.error && existing.data.session) redirect(`/${locale}/dashboard`);
+      authError(locale, "register", "email_already_registered");
+    }
+    authError(locale, "register", "registration_failed");
+  }
 
   // Prefer immediate session (Confirm email disabled in Supabase).
   if (data.session) redirect(`/${locale}/dashboard`);

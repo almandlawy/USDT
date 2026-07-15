@@ -16,8 +16,12 @@ function registerErrorMessage(code: string | undefined, ar: boolean) {
         : "Incomplete details or weak password. Use 12+ characters with upper, lower, number and symbol, and accept the terms.";
     case "registration_failed":
       return ar
-        ? "تعذر إنشاء الحساب من Supabase. تحقق من تفعيل Email Auth، أو أن البريد غير مستخدم مسبقاً."
-        : "Supabase could not create the account. Check Email Auth, or whether the email is already registered.";
+        ? "تعذر إنشاء الحساب من Supabase. تحقق من تفعيل Email Auth، أو جرّب بريداً آخر."
+        : "Supabase could not create the account. Check Email Auth, or try another email.";
+    case "email_already_registered":
+      return ar
+        ? "هذا البريد مسجّل مسبقاً. ادخل من تسجيل الدخول، أو احذف المستخدم من Supabase → Authentication → Users ثم أعد التسجيل."
+        : "This email is already registered. Sign in, or delete the user in Supabase → Authentication → Users and register again.";
     case "email_confirmation_required":
       return ar
         ? "الحساب أُنشئ، لكن Supabase ما زال يطلب تأكيد البريد. في Supabase: Authentication → Providers → Email → أوقف Confirm email ثم احفظ، وبعدها سجّل دخول مباشرة."
