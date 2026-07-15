@@ -1,14 +1,17 @@
 import "server-only";
 import { headers } from "next/headers";
-import { publicEnv } from "@/lib/env";
+import { getSiteOrigin } from "@/lib/site";
 
 export async function assertSameOrigin() {
   const requestHeaders = await headers();
   const origin = requestHeaders.get("origin");
   const host = requestHeaders.get("host");
   if (!origin || !host) throw new Error("CSRF_ORIGIN_REQUIRED");
-  const allowed = new URL(publicEnv.NEXT_PUBLIC_APP_URL);
-  if (new URL(origin).host !== host || new URL(origin).host !== allowed.host) throw new Error("CSRF_ORIGIN_REJECTED");
+  const originHost = new URL(origin).host;
+  const allowedHost = new URL(getSiteOrigin()).host;
+  // Require same-origin posting, and reject posts that do not target the
+  // configured production/app host (falls back to gulf-gate-platform.vercel.app).
+  if (originHost !== host || originHost !== allowedHost) throw new Error("CSRF_ORIGIN_REJECTED");
 }
 
 export async function requestFingerprint() {
