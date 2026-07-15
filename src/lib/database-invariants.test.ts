@@ -7,6 +7,7 @@ const completion = readFileSync(resolve(process.cwd(), "supabase/migrations/2026
 const controls = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150003_rbac_and_risk_controls.sql"), "utf8");
 const ops = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150004_ops_queue.sql"), "utf8");
 const workflows = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150005_workflows_levels_chat_batches.sql"), "utf8");
+const intelligence = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150006_intelligence_and_dual_control.sql"), "utf8");
 
 describe("database launch invariants", () => {
   it("seeds live trading off and protects activation", () => {
@@ -55,4 +56,10 @@ describe("operations workflow invariants",()=>{
   it("enforces KYC caps in the database",()=>{expect(workflows).toContain("orders_level_limit");expect(workflows).toContain("KYC_LEVEL_LIMIT_EXCEEDED")});
   it("enables RLS for chat and batches",()=>{expect(workflows).toContain("alter table public.order_messages enable row level security");expect(workflows).toContain("alter table public.review_batches enable row level security")});
   it("does not implement settlement or release",()=>{expect(workflows).not.toMatch(/settlement_tx_hash\s*=/);expect(workflows).not.toMatch(/released_at\s*=/)});
+});
+
+describe("intelligence and dual-control invariants",()=>{
+  it("enables RLS on every new sensitive table",()=>{for(const table of ["compliance_cases","case_checklist_items","approval_requests","merchant_metric_snapshots","saved_views"])expect(intelligence).toContain(`alter table public.${table} enable row level security`)});
+  it("requires AAL2 and four eyes for decisions",()=>{expect(intelligence).toContain("MFA_REQUIRED");expect(intelligence).toContain("FOUR_EYES_REQUIRED");expect(intelligence).toContain("decided_by<>requested_by")});
+  it("adds no financial execution path",()=>{expect(intelligence).not.toMatch(/settlement_tx_hash\s*=/);expect(intelligence).not.toMatch(/released_at\s*=/);expect(intelligence).toContain("never executes deposits")});
 });
