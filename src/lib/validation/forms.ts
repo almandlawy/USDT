@@ -4,7 +4,7 @@ export const authIdentifierSchema = z.union([z.string().email(), z.string().rege
 export const passwordSchema = z.string().min(12).max(128).regex(/[a-z]/).regex(/[A-Z]/).regex(/\d/).regex(/[^A-Za-z0-9]/);
 
 export const registerSchema = z.object({
-  identifier: authIdentifierSchema,
+  identifier: z.string().email(),
   password: passwordSchema,
   displayName: z.string().trim().min(2).max(100),
   locale: z.enum(["ar", "en"]),

@@ -21,12 +21,12 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
   const market=await getMarketSnapshot();
   const nonce=(await headers()).get("x-nonce")||undefined;
   const features = ar ? [
-    [Fingerprint, "هوية موثقة", "تسجيل آمن، OTP، 2FA، ومسار KYC للأفراد والشركات."],
+    [Fingerprint, "هوية موثقة", "تسجيل آمن برابط البريد، 2FA، ومسار KYC للأفراد والشركات."],
     [Workflow, "طلبات واضحة", "شراء وبيع وP2P مع مرجع موحد وحالة زمنية كاملة."],
     [ScanLine, "إثباتات خاصة", "ملفات مشفرة، روابط مؤقتة، ومراجعة قابلة لإعادة التقديم."],
     [ShieldCheck, "امتثال مدمج", "ضوابط صلاحيات، تنبيهات مخاطر، وسجل تدقيق غير قابل للتعديل."],
   ] : [
-    [Fingerprint, "Verified identity", "Secure registration, OTP, 2FA and KYC workflows for people and businesses."],
+    [Fingerprint, "Verified identity", "Secure email-link registration, 2FA and KYC workflows for people and businesses."],
     [Workflow, "Structured requests", "Buy, sell and P2P requests with unified references and complete timelines."],
     [ScanLine, "Private evidence", "Encrypted files, temporary links and review with resubmission support."],
     [ShieldCheck, "Built-in compliance", "Least privilege, risk alerts and an immutable audit trail."],
