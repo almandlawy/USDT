@@ -25,7 +25,7 @@ describe("SEO site origin",()=>{
 
   it("keeps crawler and social metadata routes outside the locale proxy",()=>{
     const proxy=readFileSync(resolve(process.cwd(),"src/proxy.ts"),"utf8");
-    for(const route of ["robots.txt","sitemap.xml","manifest.webmanifest","opengraph-image"]){
+    for(const route of ["auth/callback","robots.txt","sitemap.xml","manifest.webmanifest","opengraph-image"]){
       expect(proxy).toContain(route);
     }
   });
