@@ -29,5 +29,11 @@ jobs:
           NEXT_PUBLIC_APP_URL: https://gulf-gate-platform.vercel.app
           NEXT_PUBLIC_LIVE_TRADING: "false"
           LIVE_TRADING: "false"
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production smoke (Playwright)
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: https://gulf-gate-platform.vercel.app
       - name: Dependency audit (report only)
         run: npm audit --omit=dev --audit-level=critical || true

@@ -13,6 +13,7 @@ import { PrelaunchBanner } from "@/components/ui/prelaunch-banner";
 import { signOutAction } from "@/app/[locale]/(auth)/actions";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/constants";
+import { formatUnreadBadge } from "@/lib/notifications";
 
 const clientIcons = [LayoutDashboard, Shield, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, History, LifeBuoy, Bell, Shield];
 const clientKeys = ["overview", "trust", "profile", "kyc", "buy", "sell", "p2p", "proofs", "orders", "support", "notifications", "security"] as const;
@@ -26,17 +27,13 @@ function isActivePath(pathname: string, href: string) {
   return pathname.startsWith(`${href}/`) || pathname === href;
 }
 
-function badgeLabel(count: number) {
-  if (count <= 0) return null;
-  return count > 99 ? "99+" : String(count);
-}
-
 export function DashboardShell({
   locale,
   dict,
   admin = false,
   userName,
   unreadCount = 0,
+  allowedAdminSlugs,
   children,
 }: {
   locale: Locale;
@@ -44,6 +41,8 @@ export function DashboardShell({
   admin?: boolean;
   userName: string;
   unreadCount?: number;
+  /** When set, admin nav is filtered to these slugs (empty string = hub). */
+  allowedAdminSlugs?: string[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname() || `/${locale}/${admin ? "admin" : "dashboard"}`;
@@ -57,9 +56,12 @@ export function DashboardShell({
     const Icon = icons[index];
     const slug = admin ? adminSlugs[index] : (key === "overview" ? "" : key === "trust" ? "trust-center" : key);
     const label = admin ? dict.admin[key as keyof typeof dict.admin] : dict.dashboard[key as keyof typeof dict.dashboard];
-    return { key, Icon, href: `${base}${slug ? `/${slug}` : ""}`, label };
+    return { key, Icon, href: `${base}${slug ? `/${slug}` : ""}`, label, slug: String(slug) };
+  }).filter((item) => {
+    if (!admin || !allowedAdminSlugs) return true;
+    return allowedAdminSlugs.includes(item.slug);
   });
-  const unread = badgeLabel(unreadCount);
+  const unread = formatUnreadBadge(unreadCount);
   const portalLabel = admin ? dict.admin.title : dict.dashboard.portal;
 
   useEffect(() => {

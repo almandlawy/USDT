@@ -1,12 +1,17 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Activity, BrainCircuit, CheckCircle2, Clock3, Search, ShieldAlert, UsersRound } from "lucide-react";
+import { canAccessAdminSection } from "@/lib/admin-permissions";
+import { requireStaff } from "@/lib/auth";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { completeChecklistAction, createComplianceCaseAction, decideApprovalAction } from "../actions";
 
 export default async function IntelligencePage({params,searchParams}:{params:Promise<{locale:string}>;searchParams:Promise<Record<string,string|undefined>>}){
-  const {locale}=await params;if(!isLocale(locale))notFound();const ar=locale==="ar",q=await searchParams,s=await createClient(),term=(q.q||"").trim();
+  const {locale}=await params;if(!isLocale(locale))notFound();
+  const staff=await requireStaff(locale,["super_admin","operations","compliance","finance","support","reviewer"]);
+  if(!canAccessAdminSection(staff.roles,"intelligence")) redirect(`/${locale}/admin?error=forbidden`);
+  const ar=locale==="ar",q=await searchParams,s=await createClient(),term=(q.q||"").trim();
   const [{data:cases},{data:approvals},{data:merchants},{data:searchOrders},{data:searchProfiles}]=await Promise.all([
     s.from("compliance_cases").select("id,reference_number,case_type,risk_score,risk_band,priority,stage,title,assigned_to,sla_due_at,created_at,case_checklist_items(id,label_ar,label_en,required,completed,sort_order)").not("stage","in",'(resolved,closed)').order("sla_due_at").limit(50),
     s.from("approval_requests").select("id,action_type,entity_type,entity_id,reason,status,requested_by,expires_at,created_at").eq("status","pending").order("expires_at").limit(20),
@@ -17,7 +22,7 @@ export default async function IntelligencePage({params,searchParams}:{params:Pro
   // Server-rendered operational snapshot; current time is intentionally captured once per request.
   // eslint-disable-next-line react-hooks/purity
   const now=Date.now(),open=cases?.length||0,overdue=(cases||[]).filter(c=>new Date(c.sla_due_at).getTime()<now).length,critical=(cases||[]).filter(c=>c.risk_score>=75).length,pending=approvals?.length||0;
-  return <><div className="pageHeading"><div><span>GULF GATE / OPERATIONS INTELLIGENCE</span><h1>{ar?"مركز القرار والامتثال":"Decision & compliance intelligence"}</h1><p>{ar?"قضايا 360°، SLA، موافقة ثنائية، ومؤشرات تجار — دون تنفيذ مالي.":"360° cases, SLA, dual control and merchant intelligence — without financial execution."}</p></div><StatusBadge tone="danger">LIVE_TRADING=false</StatusBadge></div>
+  return <><div className="pageHeading"><div><span>{ar?"Gulf Gate / ذكاء العمليات":"Gulf Gate / operations intelligence"}</span><h1>{ar?"مركز القرار والامتثال":"Decision & compliance intelligence"}</h1><p>{ar?"قضايا 360°، SLA، موافقة ثنائية، ومؤشرات تجار — دون تنفيذ مالي.":"360° cases, SLA, dual control and merchant intelligence — without financial execution."}</p></div><StatusBadge tone="danger">{ar?"التنفيذ الحقيقي مقفول":"Live execution locked"}</StatusBadge></div>
   <section className="panel"><form className="globalSearch"><Search/><input name="q" defaultValue={term} placeholder={ar?"ابحث بالمرجع أو الهاتف أو اسم العميل":"Search reference, phone or customer"}/><button className="primaryButton">{ar?"بحث شامل":"Global search"}</button></form>{term&&<div className="searchResults">{(searchProfiles||[]).map(p=><article key={p.id}><UsersRound/><span><b>{p.display_name||p.phone||p.id.slice(0,8)}</b><small>{p.account_type} · KYC L{p.kyc_level}</small></span></article>)}{(searchOrders||[]).map(o=><article key={o.id}><Activity/><span><b>{o.reference_number}</b><small>{o.order_type} · {o.amount_fiat} {o.fiat_currency} · {o.status}</small></span></article>)}</div>}</section>
   <div className="metricGrid adminMetrics">{[[BrainCircuit,ar?"قضايا مفتوحة":"Open cases",open],[Clock3,ar?"تجاوزت SLA":"SLA overdue",overdue],[ShieldAlert,ar?"حرجة":"Critical",critical],[CheckCircle2,ar?"موافقات معلقة":"Pending approvals",pending]].map(([Icon,label,value])=>{const I=Icon as typeof Activity;return <article className="metricCard" key={String(label)}><div className="metricIcon"><I/></div><span>{String(label)}</span><strong>{String(value)}</strong></article>})}</div>
   <div className="intelligenceGrid"><section className="caseStack">{(cases||[]).map(c=><details className={`panel caseCard risk-${c.risk_band}`} key={c.id}><summary><span><StatusBadge tone={c.risk_score>=75?"danger":c.risk_score>=50?"warning":"info"}>{c.risk_band} · {c.risk_score}</StatusBadge><b>{c.reference_number} · {c.title}</b><small>{c.case_type} · {c.stage}</small></span><span><b>{new Date(c.sla_due_at).getTime()<now?(ar?"متأخرة":"Overdue"):(ar?"قبل":"Due")} {new Date(c.sla_due_at).toLocaleString(ar?"ar-IQ":"en-GB")}</b></span></summary><div className="caseChecklist">{(c.case_checklist_items||[]).sort((a:{sort_order:number},b:{sort_order:number})=>a.sort_order-b.sort_order).map((item:{id:string;label_ar:string;label_en:string;completed:boolean;required:boolean})=><form action={completeChecklistAction} key={item.id}><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={item.id}/><input type="hidden" name="completed" value={item.completed?"false":"true"}/><button className={item.completed?"complete":""}><CheckCircle2/><span>{ar?item.label_ar:item.label_en}{item.required&&<small>{ar?"إلزامي":"Required"}</small>}</span></button></form>)}</div></details>)}{!cases?.length&&<div className="panel emptyState">{ar?"لا توجد قضايا مفتوحة":"No open cases"}</div>}</section>

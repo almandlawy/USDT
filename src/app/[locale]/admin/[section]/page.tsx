@@ -1,11 +1,15 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CircleAlert, LockKeyhole, Save, ShieldCheck } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { canAccessAdminSection, type AdminSection } from "@/lib/admin-permissions";
+import { requireStaff } from "@/lib/auth";
 import { isLocale } from "@/lib/i18n/dictionaries";
+import { getMarketSnapshot } from "@/lib/market-data";
+import { getMarketFxSettings } from "@/lib/market-fx";
 import { createClient } from "@/lib/supabase/server";
 import {
-  grantStaffRoleAction, reviewKycAction, reviewProofAction, savePaymentMethodAction,
+  grantStaffRoleAction, reviewKycAction, reviewProofAction, saveMarketFxAction, savePaymentMethodAction,
   savePricingAction, saveWalletAddressAction, setTradingAction, updateFeatureFlagAction,
   updateOrderStatusAction,
 } from "../actions";
@@ -59,14 +63,71 @@ async function loadSection(section:Section) {
 
 export default async function AdminSectionPage({params,searchParams}:{params:Promise<{locale:string;section:string}>;searchParams:Promise<Record<string,string|undefined>>}){
   const {locale,section:raw}=await params;if(!isLocale(locale)||!sections.includes(raw as Section))notFound();
-  const section=raw as Section, ar=locale==="ar", query=await searchParams, data=await loadSection(section);
+  const section=raw as Section;
+  const staff=await requireStaff(locale, ["super_admin","operations","compliance","finance","support","reviewer"]);
+  if(!canAccessAdminSection(staff.roles, section as AdminSection)) redirect(`/${locale}/admin?error=forbidden`);
+  const ar=locale==="ar", query=await searchParams, data=await loadSection(section);
   const keys=Array.from(new Set(data.rows.flatMap(row=>Object.keys(row)))).slice(0,10);
   const rows=data.rows.map(row=>keys.map(key=>display(row[key])));
-  return <><div className="pageHeading"><div><span>ADMIN / {raw.toUpperCase()}</span><h1>{titles[section][ar?0:1]}</h1><p>{ar?"بيانات حقيقية من قاعدة البيانات، محكومة بالدور وسياسات RLS.":"Live database records governed by role and RLS policies."}</p></div>{section==="settings"&&<StatusBadge tone="danger"><LockKeyhole/>LIVE_TRADING=false</StatusBadge>}</div>
-    {(query.error||data.error)&&<div className="formAlert"><CircleAlert/>{data.error||query.error}</div>}
+  const ratesExtras=section==="rates"?await loadRatesExtras(locale):null;
+  return <><div className="pageHeading"><div><span>{ar?"الإدارة":"Admin"} / {raw.replaceAll("-"," ")}</span><h1>{titles[section][ar?0:1]}</h1><p>{ar?"بيانات حقيقية محكومة بالدور وصلاحيات الخادم.":"Live data governed by role and server-side permissions."}</p></div>{section==="settings"&&<StatusBadge tone="danger"><LockKeyhole/>{ar?"التنفيذ الحقيقي مقفول":"Live execution locked"}</StatusBadge>}</div>
+    {(query.error||data.error)&&<div className="formAlert"><CircleAlert/>{adminErrorMessage(query.error||data.error,ar)}</div>}
     {(query.saved||query.updated)&&<div className="formSuccess"><ShieldCheck/>{ar?"تم الحفظ وسُجل التغيير.":"Saved and audit logged."}</div>}
-    <section className="panel"><div className="panelHeading"><div><span>CONTROLLED RECORDS</span><h2>{titles[section][ar?0:1]}</h2></div><StatusBadge tone="neutral">{data.rows.length} records</StatusBadge></div>{rows.length?<DataTable columns={keys} rows={rows}/>:<div className="emptyState"><ShieldCheck/><h3>{ar?"لا توجد سجلات":"No records"}</h3><p>{ar?"ستظهر البيانات هنا بعد إنشائها.":"Records will appear here when created."}</p></div>}</section>
+    {ratesExtras}
+    <section className="panel"><div className="panelHeading"><div><span>{ar?"سجلات مضبوطة":"Controlled records"}</span><h2>{titles[section][ar?0:1]}</h2></div><StatusBadge tone="neutral">{data.rows.length}</StatusBadge></div>{rows.length?<DataTable columns={keys} rows={rows}/>:<div className="emptyState"><ShieldCheck/><h3>{ar?"لا توجد سجلات":"No records"}</h3><p>{ar?"ستظهر البيانات هنا بعد إنشائها.":"Records will appear here when created."}</p></div>}</section>
     {section==="kyc"&&<ReviewForm locale={locale} kind="kyc"/>}{section==="proofs"&&<ReviewForm locale={locale} kind="proofs"/>}{["buy-orders","sell-orders"].includes(section)&&<ReviewForm locale={locale} kind="orders"/>}{section==="payment-methods"&&<PaymentMethodForm locale={locale}/>} {section==="rates"&&<PricingForm locale={locale}/>} {section==="wallets"&&<WalletForm locale={locale}/>} {section==="roles"&&<RoleForm locale={locale}/>} {section==="feature-flags"&&<FeatureFlags rows={data.rows} locale={locale}/>} {section==="settings"&&<ActivationForm locale={locale}/>}</>;
+}
+
+async function loadRatesExtras(locale:"ar"|"en"){
+  const ar=locale==="ar";
+  const [fx, market, supabase]=await Promise.all([getMarketFxSettings(), getMarketSnapshot(), createClient()]);
+  const {data:fxAudit}=await supabase.from("audit_logs").select("id,actor_id,action,created_at,new_data").eq("entity_type","market_fx_settings").order("created_at",{ascending:false}).limit(8);
+  const usdt=market.assets.find((asset)=>asset.symbol==="USDT");
+  return <>
+    <section className="panel">
+      <div className="panelHeading"><div><span>{ar?"مزود الأسعار":"Market provider"}</span><h2>{ar?"حالة العرض الاسترشادي":"Indicative market status"}</h2></div>
+        <StatusBadge tone={market.source==="fallback"?"warning":"success"}>{market.source}</StatusBadge>
+      </div>
+      <div className="metricGrid adminMetrics">
+        <article className="metricCard"><span>{ar?"مصدر السعر":"Source"}</span><strong>{market.source}</strong><small>{market.stale?(ar?"بيانات احتياطية/مشتقة":"Stale / derived"):(ar?"آخر جلب ناجح":"Fresh fetch")}</small></article>
+        <article className="metricCard"><span>USDT / IQD</span><strong>{usdt&&usdt.iqd>0?usdt.iqd.toLocaleString(ar?"ar-IQ":"en-US"):"—"}</strong><small>{market.fxNote||"—"}</small></article>
+        <article className="metricCard"><span>USD / IQD FX</span><strong>{fx.usdToIqd}</strong><small>{fx.source}</small></article>
+        <article className="metricCard"><span>USD / AED FX</span><strong>{fx.usdToAed}</strong><small>{fx.updatedAt?new Date(fx.updatedAt).toLocaleString(ar?"ar-IQ":"en-GB"):(ar?"من البيئة":"From environment")}</small></article>
+      </div>
+      {market.providerError?<div className="formAlert"><CircleAlert/>{ar?"تعذر الوصول للمزود — يتم استخدام الاحتياطي.":"Provider unreachable — using fallback."} ({market.providerError})</div>:null}
+      <p className="helperText">{ar?"الأسعار استرشادية فقط وليست عرض بيع أو شراء ملزم. لا تفتح تنفيذاً مالياً.":"Rates are indicative only and not a binding bid/offer. They do not unlock financial execution."}</p>
+    </section>
+    <section className="panel adminFormPanel">
+      <div className="panelHeading"><div><span>{ar?"تعديل مضبوط":"Controlled edit"}</span><h2>{ar?"سعر الصرف الاحتياطي":"Fallback FX rates"}</h2></div><ShieldCheck/></div>
+      <form action={saveMarketFxAction} className="formGrid">
+        <input type="hidden" name="locale" value={locale}/>
+        <label><span>USD → IQD</span><input name="usdToIqd" type="number" step="any" min="0.000001" defaultValue={fx.usdToIqd} required/></label>
+        <label><span>USD → AED</span><input name="usdToAed" type="number" step="any" min="0.000001" defaultValue={fx.usdToAed} required/></label>
+        <label className="fullField"><span>{ar?"ملاحظة التدقيق":"Audit note"}</span><textarea name="notes" rows={2} defaultValue={fx.notes||""} placeholder={ar?"سبب التعديل":"Reason for change"}/></label>
+        <button className="primaryButton" type="submit"><Save/>{ar?"حفظ الصرف وتسجيل التدقيق":"Save FX and audit"}</button>
+      </form>
+    </section>
+    <section className="panel">
+      <div className="panelHeading"><div><span>{ar?"سجل التغييرات":"Change log"}</span><h2>{ar?"تعديلات أسعار الصرف":"FX rate changes"}</h2></div></div>
+      {fxAudit?.length
+        ? <DataTable columns={ar?["الوقت","الإجراء","الممثل","الملخص"]:["When","Action","Actor","Summary"]} rows={fxAudit.map((row)=>[
+            new Date(row.created_at).toLocaleString(ar?"ar-IQ":"en-GB"),
+            row.action,
+            String(row.actor_id||"—").slice(0,8),
+            JSON.stringify(row.new_data||{}).slice(0,80),
+          ])}/>
+        : <div className="emptyState">{ar?"لا توجد تعديلات مسجلة بعد (يلزم تطبيق migration FX audit).":"No FX audits yet (apply the FX audit migration)."}</div>}
+    </section>
+  </>;
+}
+
+function adminErrorMessage(code:string|undefined,ar:boolean){
+  switch(code){
+    case "invalid_fx": return ar?"قيم الصرف يجب أن تكون أكبر من صفر.":"FX values must be greater than zero.";
+    case "fx_save_failed": return ar?"تعذر حفظ سعر الصرف.":"Could not save FX rates.";
+    case "forbidden": return ar?"ليست لديك صلاحية لهذا القسم.":"You do not have access to this section.";
+    default: return code|| (ar?"حدث خطأ.":"Something went wrong.");
+  }
 }
 
 function ReviewForm({locale,kind}:{locale:"ar"|"en";kind:"kyc"|"proofs"|"orders"}){const ar=locale==="ar";const action=kind==="kyc"?reviewKycAction:kind==="proofs"?reviewProofAction:updateOrderStatusAction;const statuses=kind==="orders"?["awaiting_kyc","awaiting_payment","proof_uploaded","under_review","payment_confirmed","compliance_hold","approved","cancelled","rejected","refund_required"]:["under_review","approved","rejected","resubmission_required"];return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>MANUAL REVIEW / AUDITED</span><h2>{ar?"إجراء مراجعة":"Review action"}</h2></div><ShieldCheck/></div><form action={action} className="formGrid"><input type="hidden" name="locale" value={locale}/><label><span>UUID</span><input name="id" required/></label><label><span>{ar?"الحالة الجديدة":"New status"}</span><select name="status">{statuses.map(s=><option key={s}>{s}</option>)}</select></label><label className="fullField"><span>{ar?"ملاحظة المراجع":"Reviewer note"}</span><textarea name="note" rows={3}/></label>{kind==="proofs"&&<label className="checkLine"><input type="checkbox" name="flagMismatch"/>{ar?"إشارة عدم تطابق":"Flag mismatch"}</label>}<button className="primaryButton" type="submit"><Save/>{ar?"حفظ القرار":"Save decision"}</button></form></section>}

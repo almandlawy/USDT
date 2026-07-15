@@ -39,13 +39,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
       .eq("user_id", user.id)
       .not("status", "in", "(completed,cancelled,rejected)"),
     supabase.from("kyc_cases").select("status").eq("user_id", user.id).maybeSingle(),
-    supabase.from("kyc_documents").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("kyc_documents").select("id,kind").eq("user_id", user.id),
     supabase.from("payment_proofs").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase
       .from("support_tickets")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .in("status", ["open", "waiting_customer", "waiting_staff", "pending"]),
+      .in("status", ["open", "waiting_customer", "waiting_staff"]),
   ]);
 
   const queryError =
@@ -79,7 +79,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   const orders = recentResult.data || [];
   const openOrders = openCountResult.count ?? 0;
   const kycStatus = kycResult.data?.status || null;
-  const progress = computeKycProgress(kycStatus, docsResult.count || 0);
+  const kycDocs = docsResult.data || [];
+  const progress = computeKycProgress(
+    kycStatus,
+    kycDocs.length,
+    kycDocs.map((doc) => String(doc.kind || "")),
+  );
   const ring = 2 * Math.PI * 50;
   const dash = progress.showPercent ? (progress.percent / 100) * ring : 0;
 
