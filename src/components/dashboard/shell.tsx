@@ -1,5 +1,12 @@
+"use client";
+
 import Link from "next/link";
-import { Bell, LayoutDashboard, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, History, LifeBuoy, Shield, LogOut, Users, CreditCard, BadgeDollarSign, TriangleAlert, Headphones, UserCog, ScrollText, Settings, Menu, Wallet, Scale, Flag, Gavel, SlidersHorizontal, ListTodo, BrainCircuit } from "lucide-react";
+import { usePathname } from "next/navigation";
+import {
+  Bell, LayoutDashboard, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2,
+  History, LifeBuoy, Shield, LogOut, Users, CreditCard, BadgeDollarSign, TriangleAlert, Headphones,
+  UserCog, ScrollText, Settings, Menu, Wallet, Scale, Flag, Gavel, SlidersHorizontal, ListTodo, BrainCircuit,
+} from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { PrelaunchBanner } from "@/components/ui/prelaunch-banner";
 import { signOutAction } from "@/app/[locale]/(auth)/actions";
@@ -8,15 +15,98 @@ import type { Locale } from "@/lib/constants";
 
 const clientIcons = [LayoutDashboard, Shield, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, History, LifeBuoy, Bell, Shield];
 const clientKeys = ["overview", "trust", "profile", "kyc", "buy", "sell", "p2p", "proofs", "orders", "support", "notifications", "security"] as const;
-const adminIcons = [LayoutDashboard,BrainCircuit,ListTodo,Users,BadgeCheck,ArrowDownToLine,ArrowUpFromLine,Handshake,FileCheck2,CreditCard,BadgeDollarSign,Scale,SlidersHorizontal,Wallet,TriangleAlert,Gavel,Headphones,Bell,UserCog,Shield,ScrollText,FileCheck2,Settings,Flag];
-const adminKeys = ["dashboard","intelligence","ops","customers","kyc","buyOrders","sellOrders","p2p","proofs","paymentMethods","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","flags"] as const;
-const adminSlugs = ["","intelligence","ops","customers","kyc","buy-orders","sell-orders","p2p","proofs","payment-methods","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","feature-flags"];
+const adminIcons = [LayoutDashboard, BrainCircuit, ListTodo, Users, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, CreditCard, BadgeDollarSign, Scale, SlidersHorizontal, Wallet, TriangleAlert, Gavel, Headphones, Bell, UserCog, Shield, ScrollText, FileCheck2, Settings, Flag];
+const adminKeys = ["dashboard", "intelligence", "ops", "customers", "kyc", "buyOrders", "sellOrders", "p2p", "proofs", "paymentMethods", "rates", "fees", "limits", "wallets", "compliance", "disputes", "support", "notifications", "staff", "roles", "audit", "legal", "settings", "flags"] as const;
+const adminSlugs = ["", "intelligence", "ops", "customers", "kyc", "buy-orders", "sell-orders", "p2p", "proofs", "payment-methods", "rates", "fees", "limits", "wallets", "compliance", "disputes", "support", "notifications", "staff", "roles", "audit", "legal", "settings", "feature-flags"];
 
-export function DashboardShell({ locale, dict, admin = false, userName, children }: { locale: Locale; dict: Dictionary; admin?: boolean; userName: string; children: React.ReactNode }) {
+function isActivePath(pathname: string, href: string) {
+  if (pathname === href) return true;
+  if (href.endsWith("/dashboard") || href.endsWith("/admin")) return pathname === href;
+  return pathname.startsWith(`${href}/`) || pathname === href;
+}
+
+function badgeLabel(count: number) {
+  if (count <= 0) return null;
+  return count > 99 ? "99+" : String(count);
+}
+
+export function DashboardShell({
+  locale,
+  dict,
+  admin = false,
+  userName,
+  unreadCount = 0,
+  children,
+}: {
+  locale: Locale;
+  dict: Dictionary;
+  admin?: boolean;
+  userName: string;
+  unreadCount?: number;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname() || `/${locale}/${admin ? "admin" : "dashboard"}`;
   const other = locale === "ar" ? "en" : "ar";
+  const localeSwitchHref = pathname.replace(new RegExp(`^/${locale}(?=/|$)`), `/${other}`) || `/${other}/${admin ? "admin" : "dashboard"}`;
   const base = `/${locale}/${admin ? "admin" : "dashboard"}`;
   const icons = admin ? adminIcons : clientIcons;
   const keys = admin ? adminKeys : clientKeys;
-  const navItems = keys.map((key, index) => { const Icon = icons[index]; const slug = admin ? adminSlugs[index] : (key === "overview" ? "" : key === "trust" ? "trust-center" : key); const label = admin ? dict.admin[key as keyof typeof dict.admin] : dict.dashboard[key as keyof typeof dict.dashboard]; return { key, Icon, href: `${base}${slug ? `/${slug}` : ""}`, label }; });
-  return <div className="appFrame"><aside className="appSidebar"><div className="sidebarBrand"><Logo locale={locale}/></div><div className="workspaceLabel">{admin ? dict.admin.title : "CLIENT PORTAL"}</div><nav className="sideNav">{navItems.map(({key,Icon,href,label}) => <Link href={href} key={key}><Icon size={18}/><span>{label}</span></Link>)}</nav><div className="sidebarBottom"><Link href={`/${other}/${admin ? "admin" : "dashboard"}`} className="langButton">{other.toUpperCase()}</Link><form action={signOutAction}><input type="hidden" name="locale" value={locale}/><button type="submit"><LogOut size={17}/>{dict.dashboard.signout}</button></form></div></aside><div className="appMain"><PrelaunchBanner locale={locale}/><header className="appTopbar"><details className="mobileNav"><summary aria-label="Menu"><Menu/></summary><nav>{navItems.map(({key,Icon,href,label}) => <Link href={href} key={key}><Icon size={17}/>{label}</Link>)}</nav></details><div><span className="topbarKicker">{admin ? dict.admin.title : dict.dashboard.greeting}</span><strong>{userName}</strong></div><div className="topbarActions"><Link href={`/${locale}/dashboard/notifications`} aria-label="Notifications"><Bell size={19}/><i>3</i></Link><div className="avatar">{userName.slice(0,2).toUpperCase()}</div></div></header><main className="appContent">{children}</main></div></div>;
+  const navItems = keys.map((key, index) => {
+    const Icon = icons[index];
+    const slug = admin ? adminSlugs[index] : (key === "overview" ? "" : key === "trust" ? "trust-center" : key);
+    const label = admin ? dict.admin[key as keyof typeof dict.admin] : dict.dashboard[key as keyof typeof dict.dashboard];
+    return { key, Icon, href: `${base}${slug ? `/${slug}` : ""}`, label };
+  });
+  const unread = badgeLabel(unreadCount);
+  const portalLabel = admin ? dict.admin.title : dict.dashboard.portal;
+
+  return (
+    <div className="appFrame">
+      <aside className="appSidebar">
+        <div className="sidebarBrand"><Logo locale={locale} /></div>
+        <div className="workspaceLabel">{portalLabel}</div>
+        <nav className="sideNav">
+          {navItems.map(({ key, Icon, href, label }) => (
+            <Link href={href} key={key} className={isActivePath(pathname, href) ? "active" : undefined} aria-current={isActivePath(pathname, href) ? "page" : undefined}>
+              <Icon size={18} /><span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+        <div className="sidebarBottom">
+          <Link href={localeSwitchHref} className="langButton" hrefLang={other}>{other.toUpperCase()}</Link>
+          <form action={signOutAction}>
+            <input type="hidden" name="locale" value={locale} />
+            <button type="submit"><LogOut size={17} />{dict.dashboard.signout}</button>
+          </form>
+        </div>
+      </aside>
+      <div className="appMain">
+        <PrelaunchBanner locale={locale} />
+        <header className="appTopbar">
+          <details className="mobileNav">
+            <summary aria-label={locale === "ar" ? "القائمة" : "Menu"}><Menu /></summary>
+            <nav>
+              {navItems.map(({ key, Icon, href, label }) => (
+                <Link href={href} key={key} className={isActivePath(pathname, href) ? "active" : undefined} aria-current={isActivePath(pathname, href) ? "page" : undefined}>
+                  <Icon size={17} />{label}
+                </Link>
+              ))}
+            </nav>
+          </details>
+          <div>
+            <span className="topbarKicker">{admin ? dict.admin.title : dict.dashboard.greeting}</span>
+            <strong>{userName}</strong>
+          </div>
+          <div className="topbarActions">
+            <Link href={`/${locale}/dashboard/notifications`} aria-label={dict.dashboard.notifications} className="notificationBell">
+              <Bell size={19} />
+              {unread ? <i className="notificationCount">{unread}</i> : null}
+            </Link>
+            <div className="avatar">{userName.slice(0, 2).toUpperCase()}</div>
+          </div>
+        </header>
+        <main className="appContent">{children}</main>
+      </div>
+    </div>
+  );
 }

@@ -1,0 +1,60 @@
+import type { Locale } from "@/lib/constants";
+
+type Bilingual = { ar: string; en: string };
+
+const SYSTEM_STATUS: Record<string, Bilingual> = {
+  not_started: { ar: "لم يبدأ", en: "Not started" },
+  draft: { ar: "مسودة", en: "Draft" },
+  pending: { ar: "قيد الانتظار", en: "Pending" },
+  submitted: { ar: "تم الإرسال", en: "Submitted" },
+  under_review: { ar: "قيد المراجعة", en: "Under review" },
+  approved: { ar: "مقبول", en: "Approved" },
+  rejected: { ar: "مرفوض", en: "Rejected" },
+  completed: { ar: "مكتمل", en: "Completed" },
+  cancelled: { ar: "ملغي", en: "Cancelled" },
+  waiting_customer: { ar: "بانتظار العميل", en: "Waiting on customer" },
+  waiting_staff: { ar: "بانتظار الدعم", en: "Waiting on support" },
+  open: { ar: "مفتوحة", en: "Open" },
+  closed: { ar: "مغلقة", en: "Closed" },
+  uploaded: { ar: "تم الرفع", en: "Uploaded" },
+  accepted: { ar: "مقبول", en: "Accepted" },
+  resubmission_required: { ar: "يلزم إعادة التقديم", en: "Resubmission required" },
+  expired: { ar: "منتهي", en: "Expired" },
+  awaiting_kyc: { ar: "بانتظار التحقق", en: "Awaiting KYC" },
+  awaiting_payment: { ar: "بانتظار الإثبات التجريبي", en: "Awaiting demo proof" },
+  proof_uploaded: { ar: "تم رفع الإثبات", en: "Proof uploaded" },
+  payment_confirmed: { ar: "الإثبات مؤكد", en: "Proof confirmed" },
+  compliance_hold: { ar: "تعليق امتثال", en: "Compliance hold" },
+  processing: { ar: "معالجة مقفولة", en: "Processing locked" },
+  refund_required: { ar: "يتطلب مراجعة استرداد", en: "Refund review required" },
+};
+
+const ORDER_TYPES: Record<string, Bilingual> = {
+  buy: { ar: "شراء", en: "Buy" },
+  sell: { ar: "بيع", en: "Sell" },
+  p2p: { ar: "P2P", en: "P2P" },
+};
+
+export function systemStatusLabel(status: string | null | undefined, locale: Locale): string {
+  if (!status) return SYSTEM_STATUS.not_started[locale];
+  return SYSTEM_STATUS[status]?.[locale] || status.replaceAll("_", " ");
+}
+
+export function orderTypeLabel(type: string, locale: Locale): string {
+  return ORDER_TYPES[type]?.[locale] || type;
+}
+
+export function formatFiatAmount(amount: number, currency: string, locale: Locale): string {
+  const formatted = Number(amount).toLocaleString(locale === "ar" ? "ar-IQ" : "en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+  return `${formatted} ${currency}`;
+}
+
+export function formatOrderDate(value: string, locale: Locale): string {
+  return new Date(value).toLocaleString(locale === "ar" ? "ar-IQ" : "en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
