@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { ArrowUpLeft, ArrowUpRight, BadgeCheck, Fingerprint, Gauge, Landmark, LockKeyhole, ScanLine, ShieldCheck, Workflow, Zap, CircleCheck } from "lucide-react";
 import { MarketingHeader } from "@/components/marketing/header";
 import { Logo } from "@/components/ui/logo";
@@ -10,6 +11,7 @@ import { getMarketSnapshot } from "@/lib/market-data";
 import { MarketTicker } from "@/components/marketing/market-ticker";
 import { ExchangeDesk } from "@/components/marketing/exchange-desk";
 import { ClayAccountIcon, ClayRequestIcon, ClayVerifyIcon } from "@/components/marketing/clay-icons";
+import { SeoJsonLd } from "@/components/marketing/seo-json-ld";
 
 export default async function MarketingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -19,38 +21,43 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
   const ar = locale === "ar";
   const Arrow = ar ? ArrowUpLeft : ArrowUpRight;
   const market = await getMarketSnapshot();
+  const nonce = (await headers()).get("x-nonce") || undefined;
   const usdt = market.assets.find((asset) => asset.symbol === "USDT") || market.assets[0];
   const features = ar
     ? [
-        [Fingerprint, "هوية موثقة", "تسجيل آمن، OTP، 2FA، ومسار KYC للأفراد والشركات."],
+        [Fingerprint, "هوية موثقة", "تسجيل آمن برابط البريد، 2FA، ومسار KYC للأفراد والشركات."],
         [Workflow, "طلبات واضحة", "شراء وبيع وP2P مع مرجع موحد وحالة زمنية كاملة."],
         [ScanLine, "إثباتات خاصة", "ملفات مشفرة، روابط مؤقتة، ومراجعة قابلة لإعادة التقديم."],
         [ShieldCheck, "امتثال مدمج", "ضوابط صلاحيات، تنبيهات مخاطر، وسجل تدقيق غير قابل للتعديل."],
       ]
     : [
-        [Fingerprint, "Verified identity", "Secure registration, OTP, 2FA and KYC workflows for people and businesses."],
+        [Fingerprint, "Verified identity", "Secure email-link registration, 2FA and KYC workflows for people and businesses."],
         [Workflow, "Structured requests", "Buy, sell and P2P requests with unified references and complete timelines."],
         [ScanLine, "Private evidence", "Encrypted files, temporary links and review with resubmission support."],
         [ShieldCheck, "Built-in compliance", "Least privilege, risk alerts and an immutable audit trail."],
       ];
   const steps = ar
     ? [
-        [ClayAccountIcon, "01", "أنشئ حساباً", "سجّل بالبريد أو الهاتف وابدأ ملفك خلال دقائق."],
+        [ClayAccountIcon, "01", "أنشئ حساباً", "سجّل بالبريد وابدأ ملفك خلال دقائق."],
         [ClayVerifyIcon, "02", "أكمل التحقق", "KYC مرة واحدة للأفراد أو الشركات مع وثائق خاصة."],
         [ClayRequestIcon, "03", "أرسل طلباً للمراجعة", "شراء أو بيع USDT بمسار واضح دون تنفيذ مالي حقيقي."],
       ]
     : [
-        [ClayAccountIcon, "01", "Create an account", "Register with email or phone and start your profile in minutes."],
+        [ClayAccountIcon, "01", "Create an account", "Register with email and start your profile in minutes."],
         [ClayVerifyIcon, "02", "Verify once", "Complete individual or business KYC with private documents."],
         [ClayRequestIcon, "03", "Submit for review", "Buy or sell USDT through a clear flow with no real execution yet."],
       ];
 
   return (
     <>
+      <SeoJsonLd locale={locale} nonce={nonce} />
+      <a className="skipLink" href="#main-content">
+        {ar ? "انتقل إلى المحتوى" : "Skip to content"}
+      </a>
       <PrelaunchBanner locale={locale} />
       <MarketingHeader locale={locale} dict={dict} />
       <MarketTicker locale={locale} initial={market} />
-      <main>
+      <main id="main-content">
         <section className="heroSection">
           <div className="orb mintOrb" />
           <div className="orb goldOrb" />

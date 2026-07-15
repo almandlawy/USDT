@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Manrope } from "next/font/google";
+import { getSiteOrigin, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -17,11 +18,20 @@ const plexArabic = IBM_Plex_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-  title: { default: "Gulf Gate", template: "%s | Gulf Gate" },
-  description: "A bilingual pre-launch platform for compliant digital-asset request management.",
+  metadataBase: new URL(getSiteOrigin()),
+  applicationName: SITE_NAME,
+  title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
+  description: "A bilingual pre-launch platform for managed digital-asset requests.",
   robots: { index: true, follow: true },
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: "/favicon.ico", shortcut: "/favicon.ico" },
+  category: "finance",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  colorScheme: "dark",
+  themeColor: "#06111f",
 };
 
 export default async function RootLayout({

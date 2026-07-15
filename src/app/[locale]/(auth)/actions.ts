@@ -18,9 +18,20 @@ async function secureAuthRequest(action: string) {
   await enforceRateLimit(`auth:${action}:${fingerprint}`, action === "login" ? 8 : 4, 300);
 }
 
+async function guardAuthRequest(locale: string, page: string, action: string) {
+  try {
+    await secureAuthRequest(action);
+  } catch (error) {
+    const code = error instanceof Error && error.message === "RATE_LIMITED"
+      ? "rate_limited"
+      : "security_check_failed";
+    authError(locale, page, code);
+  }
+}
+
 export async function loginAction(formData: FormData) {
   const locale = String(formData.get("locale") || "ar");
-  await secureAuthRequest("login");
+  await guardAuthRequest(locale, "login", "login");
   if (!isSupabaseConfigured()) authError(locale, "login", "configuration");
   const identifier = authIdentifierSchema.safeParse(String(formData.get("identifier") || ""));
   const password = zPassword(String(formData.get("password") || ""));
@@ -38,7 +49,7 @@ function zPassword(value: string) { return passwordSchema.safeParse(value).succe
 
 export async function registerAction(formData: FormData) {
   const locale = String(formData.get("locale") || "ar");
-  await secureAuthRequest("register");
+  await guardAuthRequest(locale, "register", "register");
   if (!isSupabaseConfigured()) authError(locale, "register", "configuration");
   const parsed = registerSchema.safeParse({
     identifier: String(formData.get("identifier") || ""), password: String(formData.get("password") || ""),
@@ -47,7 +58,7 @@ export async function registerAction(formData: FormData) {
   if (!parsed.success) authError(locale, "register", "invalid_form");
   const { identifier, password, displayName } = parsed.data;
   const supabase = await createClient();
-  const options = { data: { display_name: displayName, preferred_locale: locale, terms_accepted: true, terms_version: "2026-07-15" } };
+  const options = { emailRedirectTo:`${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/${locale}/dashboard`, data: { display_name: displayName, preferred_locale: locale, terms_accepted: true, terms_version: "2026-07-15" } };
   const input = identifier.includes("@") ? { email: identifier, password, options } : { phone: identifier, password, options };
   const { error } = await supabase.auth.signUp(input);
   if (error) authError(locale, "register", "registration_failed");
@@ -56,7 +67,7 @@ export async function registerAction(formData: FormData) {
 
 export async function verifyOtpAction(formData: FormData) {
   const locale = String(formData.get("locale") || "ar");
-  await secureAuthRequest("otp");
+  await guardAuthRequest(locale, "verify", "otp");
   if (!isSupabaseConfigured()) authError(locale, "verify", "configuration");
   const identifier = String(formData.get("identifier") || "");
   const token = String(formData.get("token") || "");
@@ -70,12 +81,12 @@ export async function verifyOtpAction(formData: FormData) {
 
 export async function resetPasswordAction(formData: FormData) {
   const locale = String(formData.get("locale") || "ar");
-  await secureAuthRequest("reset");
+  await guardAuthRequest(locale, "reset-password", "reset");
   if (!isSupabaseConfigured()) authError(locale, "reset-password", "configuration");
   const email = String(formData.get("email") || "");
   if (!email.includes("@")) authError(locale, "reset-password", "invalid_email");
   const supabase = await createClient();
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/reset-password?mode=update` });
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/${locale}/reset-password%3Fmode%3Dupdate` });
   redirect(`/${locale}/reset-password?sent=true`);
 }
 

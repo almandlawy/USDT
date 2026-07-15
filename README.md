@@ -42,6 +42,8 @@ Open `http://localhost:3000/ar` or `/en`. Dashboard routes require Supabase auth
 
 ## Documentation
 
+- [Comprehensive production audit](docs/COMPREHENSIVE_AUDIT_2026-07-15.md)
+- [Google SEO and Search Console setup](docs/GOOGLE_SEO_SETUP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Admin setup](docs/ADMIN_SETUP.md)
 - [Deployment](docs/DEPLOYMENT.md)

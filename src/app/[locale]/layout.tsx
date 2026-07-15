@@ -2,8 +2,34 @@ import { notFound } from "next/navigation";
 import { LocaleShell } from "@/components/ui/locale-shell";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import type { Metadata } from "next";
+import { getSiteOrigin, seoCopy } from "@/lib/site";
 
-export async function generateMetadata({params}:{params:Promise<{locale:string}>}):Promise<Metadata>{const {locale}=await params;const en=locale==="en";return {title:en?"Digital asset request management":"إدارة طلبات الأصول الرقمية",description:en?"Bilingual pre-launch customer, KYC and digital-asset request management platform.":"منصة ثنائية اللغة لإدارة العملاء وKYC وطلبات الأصول الرقمية في وضع ما قبل الإطلاق.",alternates:{canonical:`/${en?"en":"ar"}`,languages:{ar:"/ar",en:"/en"}},openGraph:{title:en?"Gulf Gate — Pre-launch platform":"Gulf Gate — منصة ما قبل الإطلاق",description:en?"No real deposits, payouts or digital-asset release.":"لا إيداعات أو مدفوعات أو إطلاق أصول رقمية حقيقية.",type:"website",locale:en?"en_US":"ar_IQ"}}}
+export async function generateMetadata({params}:{params:Promise<{locale:string}>}):Promise<Metadata>{
+  const {locale}=await params;
+  const selected=locale==="en"?"en":"ar";
+  const copy=seoCopy[selected];
+  const origin=getSiteOrigin();
+  const canonical=`${origin}/${selected}`;
+  return {
+    title:{absolute:copy.title},
+    description:copy.description,
+    alternates:{
+      canonical,
+      languages:{"ar-IQ":`${origin}/ar`,"en-IQ":`${origin}/en`,"x-default":`${origin}/ar`},
+    },
+    openGraph:{
+      title:copy.title,
+      description:copy.description,
+      url:canonical,
+      siteName:"Gulf Gate",
+      type:"website",
+      locale:selected==="en"?"en_IQ":"ar_IQ",
+      alternateLocale:selected==="en"?["ar_IQ"]:["en_IQ"],
+      images:[{url:`${origin}/opengraph-image`,width:1200,height:630,alt:copy.shortTitle}],
+    },
+    twitter:{card:"summary_large_image",title:copy.title,description:copy.description,images:[`${origin}/opengraph-image`]},
+  };
+}
 
 export default async function LocaleLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
