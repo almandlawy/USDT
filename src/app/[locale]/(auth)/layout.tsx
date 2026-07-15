@@ -2,6 +2,9 @@ import { Logo } from "@/components/ui/logo";
 import { PrelaunchBanner } from "@/components/ui/prelaunch-banner";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+
+export const metadata:Metadata={robots:{index:false,follow:false,nocache:true}};
 
 export default async function AuthLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale: raw } = await params; if (!isLocale(raw)) notFound(); const ar = raw === "ar";

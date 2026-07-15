@@ -29,6 +29,15 @@ button, a { -webkit-tap-highlight-color: transparent; }
 button { border: 0; cursor: pointer; }
 svg { flex: 0 0 auto; }
 .shell { width: min(1160px, calc(100% - 32px)); margin-inline: auto; }
+.errorPage { min-height: 100vh; display: grid; align-content: center; justify-items: center; gap: 18px; padding: 32px; text-align: center; background: radial-gradient(circle at 50% 30%,rgba(22,189,221,.1),transparent 34%); }
+.errorPage>svg { width: 52px; height: 52px; color: var(--gold-300); }
+.errorPage>span { color: var(--cyan-400); font: 800 11px ui-monospace,monospace; letter-spacing: .14em; }
+.errorPage h1 { font-size: clamp(34px,7vw,60px); }
+.errorPage h1 small { color: var(--muted); font-size: .55em; }
+.errorPage p { color: var(--muted); line-height: 1.8; }
+.skipLink { position: fixed; z-index: 100; inset-block-start: 8px; inset-inline-start: 8px; padding: 10px 14px; color: #07111f; background: var(--gold-300); border-radius: 8px; font-weight: 800; transform: translateY(-150%); }
+.skipLink:focus { transform: translateY(0); }
+:where(a,button,input,select,textarea,summary):focus-visible { outline: 3px solid var(--cyan-400); outline-offset: 3px; }
 
 /* Shared controls */
 .primaryButton, .secondaryButton, .textButton, .dangerButton { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border-radius: 11px; padding: 0 20px; font-weight: 750; transition: transform .2s, border-color .2s, background .2s; }
@@ -43,7 +52,12 @@ svg { flex: 0 0 auto; }
 .textButton { min-height: 40px; padding-inline: 12px; font-size: 14px; }
 .dangerButton { color: white; background: linear-gradient(135deg, #d33d50, #8c1f31); }
 .langButton { min-width: 42px; height: 38px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; color: var(--gold-300); font-size: 12px; font-weight: 900; letter-spacing: .08em; }
-.mobileMenu { display: none; padding: 8px; border-radius: 10px; color: var(--ink); background: transparent; }
+.mobileMenu { display: none; position: relative; color: var(--ink); }
+.mobileMenu summary { display: grid; padding: 8px; border-radius: 10px; cursor: pointer; list-style: none; }
+.mobileMenu summary::-webkit-details-marker { display: none; }
+.mobileMenu nav { position: absolute; inset-block-start: calc(100% + 12px); inset-inline-end: 0; width: min(280px,calc(100vw - 24px)); display: grid; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: #091728; box-shadow: var(--shadow); }
+.mobileMenu nav a { min-height: 44px; display: flex; align-items: center; padding-inline: 12px; border-radius: 8px; color: #c8d3df; }
+.mobileMenu nav a:hover { color: var(--gold-300); background: rgba(255,255,255,.04); }
 .statusBadge { width: fit-content; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid; border-radius: 999px; font-size: 11px; font-weight: 850; letter-spacing: .025em; }
 .statusBadge svg { width: 13px; height: 13px; }
 .statusBadge.info { color: var(--cyan-400); border-color: rgba(57,219,255,.28); background: rgba(57,219,255,.08); }
@@ -81,7 +95,7 @@ svg { flex: 0 0 auto; }
 .marketRefresh { width: 36px; height: 36px; display: grid; place-items: center; color: var(--cyan-400); border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.025); }
 .marketRefresh svg { width: 16px; }
 .spinning { animation: marketSpin .8s linear infinite; }
-.marketDisclaimer { padding-bottom: 8px; color: #63778d; text-align: center; font-size: 8px; }
+.marketDisclaimer { padding-bottom: 8px; color: #8295a9; text-align: center; font-size: 10px; }
 @keyframes marketSpin { to { transform: rotate(360deg); } }
 .navInner { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .desktopNav { display: flex; align-items: center; gap: 30px; color: #b8c5d3; font-size: 13px; }
@@ -460,7 +474,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
   .prelaunchBanner { min-height: 42px; font-size: 10px; }
   .prelaunchBanner strong { display: none; }
   .desktopNav, .navActions .textButton, .navActions .primaryButton { display: none; }
-  .mobileMenu { display: grid; }
+  .mobileMenu { display: block; }
   .navInner { min-height: 64px; }
   .marketStripInner { min-height: 92px; grid-template-columns: auto 1fr auto; gap: 10px; }
   .marketLabel small { display: none; }
@@ -515,4 +529,4 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
   .profileHeader { align-items: flex-start; }
 }
 
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }

@@ -3,6 +3,9 @@ import { DashboardShell } from "@/components/dashboard/shell";
 import { requireStaff } from "@/lib/auth";
 import { STAFF_ROLES } from "@/lib/constants";
 import { getDictionary, isLocale } from "@/lib/i18n/dictionaries";
+import type { Metadata } from "next";
+
+export const metadata:Metadata={robots:{index:false,follow:false,nocache:true}};
 
 export default async function AdminLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params; if (!isLocale(locale)) notFound(); const staff = await requireStaff(locale, [...STAFF_ROLES]);
