@@ -1,0 +1,9 @@
+import { ShieldCheck } from "lucide-react";
+import { resendOtpAction, verifyOtpAction } from "../actions";
+import { isLocale } from "@/lib/i18n/dictionaries";
+import { notFound } from "next/navigation";
+
+export default async function VerifyPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ identifier?: string; error?: string;resent?:string }> }) {
+  const { locale } = await params; if (!isLocale(locale)) notFound(); const ar = locale === "ar"; const query = await searchParams;
+  return <div className="authCard compactAuth"><div className="otpIcon"><ShieldCheck/></div><div className="authHeading centered"><span>OTP VERIFICATION</span><h2>{ar ? "تحقق من الرمز" : "Verify your code"}</h2><p>{ar ? "أدخل الرمز المرسل إلى وسيلة التسجيل." : "Enter the code sent to your registration channel."}</p></div>{query.resent&&<div className="formSuccess">{ar?"أُعيد إرسال الرمز.":"The code was resent."}</div>}{query.error && <div className="formAlert">{ar ? "الرمز غير صحيح أو انتهت صلاحيته." : "The code is invalid or expired."}</div>}<form action={verifyOtpAction} className="stackForm"><input type="hidden" name="locale" value={locale}/><label><span>{ar ? "البريد أو الهاتف" : "Email or phone"}</span><input name="identifier" defaultValue={query.identifier || ""} required/></label><label><span>{ar ? "رمز التحقق" : "Verification code"}</span><input className="otpInput" name="token" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required/></label><button className="primaryButton wide" type="submit">{ar ? "تأكيد الحساب" : "Confirm account"}</button></form><form action={resendOtpAction} className="resendForm"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="identifier" value={query.identifier||""}/><button className="textButton" type="submit">{ar?"إعادة إرسال الرمز":"Resend code"}</button></form></div>;
+}

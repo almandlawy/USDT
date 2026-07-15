@@ -1,0 +1,2 @@
+import type { MetadataRoute } from "next";
+export default function sitemap():MetadataRoute.Sitemap{const base=process.env.NEXT_PUBLIC_APP_URL||"https://gulf-gate-platform.vercel.app";return ["/ar","/en","/ar/login","/en/login","/ar/register","/en/register","/ar/legal/terms","/en/legal/terms","/ar/legal/privacy","/en/legal/privacy","/ar/legal/risk","/en/legal/risk"].map(path=>({url:`${base}${path}`,lastModified:new Date(),changeFrequency:"weekly" as const,priority:path==="/ar"||path==="/en"?1:.6}))}
