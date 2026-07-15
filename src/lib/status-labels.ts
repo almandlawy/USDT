@@ -27,6 +27,18 @@ const SYSTEM_STATUS: Record<string, Bilingual> = {
   compliance_hold: { ar: "تعليق امتثال", en: "Compliance hold" },
   processing: { ar: "معالجة مقفولة", en: "Processing locked" },
   refund_required: { ar: "يتطلب مراجعة استرداد", en: "Refund review required" },
+  resolved: { ar: "تم الحل", en: "Resolved" },
+  payment_pending: { ar: "بانتظار الدفع", en: "Payment pending" },
+  disputed: { ar: "قيد النزاع", en: "Disputed" },
+  released: { ar: "الإطلاق مقفول", en: "Release locked" },
+  investigating: { ar: "قيد التحقيق", en: "Investigating" },
+  awaiting_buyer: { ar: "بانتظار المشتري", en: "Awaiting buyer" },
+  awaiting_seller: { ar: "بانتظار البائع", en: "Awaiting seller" },
+  resolved_buyer: { ar: "حُل لصالح المشتري", en: "Resolved for buyer" },
+  resolved_seller: { ar: "حُل لصالح البائع", en: "Resolved for seller" },
+  quoted: { ar: "عرض سعري", en: "Quoted" },
+  requested: { ar: "مطلوب", en: "Requested" },
+  open_case: { ar: "مفتوح", en: "Open" },
 };
 
 const ORDER_TYPES: Record<string, Bilingual> = {

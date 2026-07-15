@@ -111,3 +111,30 @@ export async function updateFeatureFlagAction(formData:FormData){
 export async function grantStaffRoleAction(formData:FormData){
   const locale=(formData.get("locale")==="en"?"en":"ar") as Locale;configured(locale,"roles");await assertSameOrigin();const staff=await requireStaff(locale,["super_admin"]);const userId=String(formData.get("userId")||"");const role=String(formData.get("role")||"");if(!/^[0-9a-f-]{36}$/i.test(userId)||!["super_admin","operations","compliance","finance","support","reviewer"].includes(role))redirect(`/${locale}/admin/roles?error=invalid_form`);const supabase=await createClient();const {error}=await supabase.from("staff_roles").upsert({user_id:userId,role,granted_by:staff.id},{onConflict:"user_id,role"});if(error)redirect(`/${locale}/admin/roles?error=save_failed`);redirect(`/${locale}/admin/roles?saved=true`);
 }
+
+/** Indicative FX only — never unlocks live trading or settlement. Audited by DB trigger. */
+export async function saveMarketFxAction(formData: FormData) {
+  const locale = (formData.get("locale") === "en" ? "en" : "ar") as Locale;
+  configured(locale, "rates");
+  await assertSameOrigin();
+  const staff = await requireStaff(locale, ["super_admin", "finance"]);
+  const usdToIqd = Number(formData.get("usdToIqd") || 0);
+  const usdToAed = Number(formData.get("usdToAed") || 0);
+  const notes = String(formData.get("notes") || "").trim().slice(0, 500);
+  if (!Number.isFinite(usdToIqd) || usdToIqd <= 0 || !Number.isFinite(usdToAed) || usdToAed <= 0) {
+    redirect(`/${locale}/admin/rates?error=invalid_fx`);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("market_fx_settings").upsert({
+    id: 1,
+    usd_to_iqd: usdToIqd,
+    usd_to_aed: usdToAed,
+    notes: notes || "Indicative fallback FX — not a live trade quote",
+    updated_by: staff.id,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) redirect(`/${locale}/admin/rates?error=fx_save_failed`);
+  revalidatePath(`/${locale}/admin/rates`);
+  revalidatePath(`/${locale}`);
+  redirect(`/${locale}/admin/rates?saved=true`);
+}

@@ -1,12 +1,17 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Activity, BrainCircuit, CheckCircle2, Clock3, Search, ShieldAlert, UsersRound } from "lucide-react";
+import { canAccessAdminSection } from "@/lib/admin-permissions";
+import { requireStaff } from "@/lib/auth";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { completeChecklistAction, createComplianceCaseAction, decideApprovalAction } from "../actions";
 
 export default async function IntelligencePage({params,searchParams}:{params:Promise<{locale:string}>;searchParams:Promise<Record<string,string|undefined>>}){
-  const {locale}=await params;if(!isLocale(locale))notFound();const ar=locale==="ar",q=await searchParams,s=await createClient(),term=(q.q||"").trim();
+  const {locale}=await params;if(!isLocale(locale))notFound();
+  const staff=await requireStaff(locale,["super_admin","operations","compliance","finance","support","reviewer"]);
+  if(!canAccessAdminSection(staff.roles,"intelligence")) redirect(`/${locale}/admin?error=forbidden`);
+  const ar=locale==="ar",q=await searchParams,s=await createClient(),term=(q.q||"").trim();
   const [{data:cases},{data:approvals},{data:merchants},{data:searchOrders},{data:searchProfiles}]=await Promise.all([
     s.from("compliance_cases").select("id,reference_number,case_type,risk_score,risk_band,priority,stage,title,assigned_to,sla_due_at,created_at,case_checklist_items(id,label_ar,label_en,required,completed,sort_order)").not("stage","in",'(resolved,closed)').order("sla_due_at").limit(50),
     s.from("approval_requests").select("id,action_type,entity_type,entity_id,reason,status,requested_by,expires_at,created_at").eq("status","pending").order("expires_at").limit(20),

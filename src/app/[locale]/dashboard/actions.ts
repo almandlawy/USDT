@@ -153,7 +153,19 @@ export async function submitKycAction(formData: FormData) {
   const missingRequired = documents.some((document) => !document.optional && !references.some((item) => item.field === document.field));
   if (missingRequired) redirect(`/${locale}/dashboard/kyc?error=missing_documents`);
 
-  const payload = { user_id: user.id, account_type: accountType, status: "draft", nationality, source_of_funds: sourceOfFunds, transaction_purpose: transactionPurpose };
+  // Clear prior review markers so rejected/resubmission cases can reopen under RLS.
+  const payload = {
+    user_id: user.id,
+    account_type: accountType,
+    status: "draft",
+    nationality,
+    source_of_funds: sourceOfFunds,
+    transaction_purpose: transactionPurpose,
+    reviewer_id: null,
+    reviewed_at: null,
+    review_notes: null,
+    submitted_at: null,
+  };
   const { data: kycCase, error: caseError } = await supabase.from("kyc_cases").upsert(payload, { onConflict: "user_id" }).select("id").single();
   if (caseError || !kycCase) redirect(`/${locale}/dashboard/kyc?error=case_failed`);
 
@@ -174,11 +186,82 @@ export async function createTicketAction(formData: FormData) {
   const locale = String(formData.get("locale") || "ar");
   const { supabase, user } = await authenticatedClient(locale, "support");
   const subject = String(formData.get("subject") || "").trim(); const message = String(formData.get("message") || "").trim();
+  const category = String(formData.get("category") || "general");
   if (subject.length < 4 || message.length < 10) redirect(`/${locale}/dashboard/support?error=invalid_form`);
-  const { data: ticket, error } = await supabase.from("support_tickets").insert({ user_id: user.id, subject: subject.slice(0,180), category: String(formData.get("category") || "general") }).select("id").single();
+  // RLS requires customer-created tickets to start as open + normal priority.
+  const { data: ticket, error } = await supabase.from("support_tickets").insert({
+    user_id: user.id,
+    subject: subject.slice(0,180),
+    category,
+    priority: "normal",
+    status: "open",
+  }).select("id").single();
   if (error || !ticket) redirect(`/${locale}/dashboard/support?error=create_failed`);
-  await supabase.from("ticket_messages").insert({ ticket_id: ticket.id, author_id: user.id, message: message.slice(0,5000) });
-  redirect(`/${locale}/dashboard/support?created=true`);
+  const { error: messageError } = await supabase.from("ticket_messages").insert({ ticket_id: ticket.id, author_id: user.id, message: message.slice(0,5000) });
+  if (messageError) redirect(`/${locale}/dashboard/support?error=create_failed`);
+  redirect(`/${locale}/dashboard/support/${ticket.id}?created=true`);
+}
+
+export async function replyTicketAction(formData: FormData) {
+  const locale = String(formData.get("locale") || "ar");
+  const { supabase, user } = await authenticatedClient(locale, "support");
+  const ticketId = String(formData.get("ticketId") || "");
+  const message = String(formData.get("message") || "").trim().slice(0, 5000);
+  if (!/^[0-9a-f-]{36}$/i.test(ticketId) || message.length < 1) {
+    redirect(`/${locale}/dashboard/support/${ticketId}?error=invalid_message`);
+  }
+  const { data: ticket } = await supabase
+    .from("support_tickets")
+    .select("id,status,user_id")
+    .eq("id", ticketId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!ticket || ticket.status === "closed") {
+    redirect(`/${locale}/dashboard/support/${ticketId}?error=ticket_closed`);
+  }
+  const { error } = await supabase.from("ticket_messages").insert({
+    ticket_id: ticketId,
+    author_id: user.id,
+    message,
+    internal: false,
+  });
+  if (error) redirect(`/${locale}/dashboard/support/${ticketId}?error=message_failed`);
+  // Status moves to waiting_staff via notify_customer_ticket_reply trigger.
+  revalidatePath(`/${locale}/dashboard/support/${ticketId}`);
+  redirect(`/${locale}/dashboard/support/${ticketId}?saved=true`);
+}
+
+export async function markNotificationReadAction(formData: FormData) {
+  const locale = String(formData.get("locale") || "ar");
+  const { supabase, user } = await authenticatedClient(locale, "notifications");
+  const id = String(formData.get("id") || "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) redirect(`/${locale}/dashboard/notifications?error=invalid_form`);
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .is("read_at", null);
+  if (error) redirect(`/${locale}/dashboard/notifications?error=save_failed`);
+  revalidatePath(`/${locale}/dashboard`);
+  revalidatePath(`/${locale}/dashboard/notifications`);
+  const next = String(formData.get("next") || "").trim();
+  if (next.startsWith(`/${locale}/dashboard/`)) redirect(next);
+  redirect(`/${locale}/dashboard/notifications?saved=true`);
+}
+
+export async function markAllNotificationsReadAction(formData: FormData) {
+  const locale = String(formData.get("locale") || "ar");
+  const { supabase, user } = await authenticatedClient(locale, "notifications");
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .is("read_at", null);
+  if (error) redirect(`/${locale}/dashboard/notifications?error=save_failed`);
+  revalidatePath(`/${locale}/dashboard`);
+  revalidatePath(`/${locale}/dashboard/notifications`);
+  redirect(`/${locale}/dashboard/notifications?saved=true`);
 }
 
 export async function updateProfileAction(formData: FormData) {

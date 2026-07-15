@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Activity, AlertTriangle, BadgeCheck, Clock3, Filter, UserRoundCog } from "lucide-react";
+import { canAccessAdminSection } from "@/lib/admin-permissions";
+import { requireStaff } from "@/lib/auth";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -9,7 +11,10 @@ import { assignOpsItemAction, reviewKycAction, reviewProofAction, updateOrderSta
 type QueueItem = { id:string; kind:"kyc"|"order"|"proof"|"dispute"; reference:string; customer:string; status:string; currency?:string; network?:string; city?:string; assignedTo?:string|null; createdAt:string; files?:{bucket:string;path:string;name:string}[] };
 
 export default async function OpsQueuePage({params,searchParams}:{params:Promise<{locale:string}>;searchParams:Promise<Record<string,string|undefined>>}) {
-  const {locale}=await params;if(!isLocale(locale))notFound();const ar=locale==="ar", filters=await searchParams,supabase=await createClient();
+  const {locale}=await params;if(!isLocale(locale))notFound();
+  const staff=await requireStaff(locale,["super_admin","operations","compliance","finance","support","reviewer"]);
+  if(!canAccessAdminSection(staff.roles,"ops")) redirect(`/${locale}/admin?error=forbidden`);
+  const ar=locale==="ar", filters=await searchParams,supabase=await createClient();
   const [{data:kyc},{data:orders},{data:proofs},{data:disputes},{data:staff},{data:activity}]=await Promise.all([
     supabase.from("kyc_cases").select("id,user_id,status,assigned_to,created_at,profiles!kyc_cases_user_id_fkey(display_name,phone),kyc_documents(storage_path,original_filename)").in("status",["submitted","under_review","resubmission_required"]),
     supabase.from("orders").select("id,reference_number,status,fiat_currency,network,assigned_to,created_at,profiles!orders_user_id_fkey(display_name,phone),payment_methods(city)").not("status","in",'(completed,cancelled,rejected)'),

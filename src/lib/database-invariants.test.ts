@@ -9,6 +9,7 @@ const ops = readFileSync(resolve(process.cwd(), "supabase/migrations/20260715000
 const workflows = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150005_workflows_levels_chat_batches.sql"), "utf8");
 const intelligence = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150006_intelligence_and_dual_control.sql"), "utf8");
 const aal2Fx = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150008_staff_rpc_aal2_and_fx_settings.sql"), "utf8");
+const customerNotify = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150009_customer_notifications_kyc_resubmit_fx_audit.sql"), "utf8");
 
 describe("database launch invariants", () => {
   it("seeds live trading off and protects activation", () => {
@@ -78,5 +79,26 @@ describe("staff AAL2 and FX settings migration", () => {
     expect(aal2Fx).toContain("market_fx_settings");
     expect(aal2Fx).toContain("Does not unlock LIVE_TRADING");
     expect(aal2Fx).toContain("LIVE_TRADING_DISABLED");
+  });
+});
+
+describe("customer notification and KYC resubmit migration", () => {
+  it("allows rejected KYC owners to reopen as draft or submitted", () => {
+    expect(customerNotify).toContain("kyc_owner_update");
+    expect(customerNotify).toContain("'rejected'");
+    expect(customerNotify).toContain("status in ('draft', 'submitted')");
+  });
+
+  it("notifies customers on KYC, order, proof and support updates", () => {
+    expect(customerNotify).toContain("notify_customer_kyc_decision");
+    expect(customerNotify).toContain("notify_customer_order_status");
+    expect(customerNotify).toContain("notify_customer_proof_decision");
+    expect(customerNotify).toContain("notify_customer_ticket_reply");
+  });
+
+  it("audits FX settings and never unlocks settlement", () => {
+    expect(customerNotify).toContain("audit_market_fx_settings");
+    expect(customerNotify).not.toMatch(/live_trading'\s*,\s*'true'/i);
+    expect(customerNotify).not.toMatch(/settlement_tx_hash\s*=/);
   });
 });
