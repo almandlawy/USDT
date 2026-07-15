@@ -8,6 +8,7 @@ const controls = readFileSync(resolve(process.cwd(), "supabase/migrations/202607
 const ops = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150004_ops_queue.sql"), "utf8");
 const workflows = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150005_workflows_levels_chat_batches.sql"), "utf8");
 const intelligence = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150006_intelligence_and_dual_control.sql"), "utf8");
+const aal2Fx = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150008_staff_rpc_aal2_and_fx_settings.sql"), "utf8");
 
 describe("database launch invariants", () => {
   it("seeds live trading off and protects activation", () => {
@@ -62,4 +63,20 @@ describe("intelligence and dual-control invariants",()=>{
   it("enables RLS on every new sensitive table",()=>{for(const table of ["compliance_cases","case_checklist_items","approval_requests","merchant_metric_snapshots","saved_views"])expect(intelligence).toContain(`alter table public.${table} enable row level security`)});
   it("requires AAL2 and four eyes for decisions",()=>{expect(intelligence).toContain("MFA_REQUIRED");expect(intelligence).toContain("FOUR_EYES_REQUIRED");expect(intelligence).toContain("decided_by<>requested_by")});
   it("adds no financial execution path",()=>{expect(intelligence).not.toMatch(/settlement_tx_hash\s*=/);expect(intelligence).not.toMatch(/released_at\s*=/);expect(intelligence).toContain("never executes deposits")});
+});
+
+describe("staff AAL2 and FX settings migration", () => {
+  it("requires AAL2 inside privileged review RPCs", () => {
+    expect(aal2Fx).toContain("require_staff_aal2");
+    expect(aal2Fx).toContain("review_kyc");
+    expect(aal2Fx).toContain("review_payment_proof");
+    expect(aal2Fx).toContain("transition_order");
+    expect(aal2Fx).toContain("MFA_REQUIRED");
+  });
+
+  it("adds indicative FX settings without enabling live trading", () => {
+    expect(aal2Fx).toContain("market_fx_settings");
+    expect(aal2Fx).toContain("Does not unlock LIVE_TRADING");
+    expect(aal2Fx).toContain("LIVE_TRADING_DISABLED");
+  });
 });

@@ -1,17 +1,27 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ArrowUpLeft, ArrowUpRight, BadgeCheck, Fingerprint, Gauge, Landmark, LockKeyhole, ScanLine, ShieldCheck, Workflow, Zap, CircleCheck } from "lucide-react";
+import {
+  ArrowUpLeft, ArrowUpRight, BadgeCheck, Building2, CircleCheck, CreditCard, Handshake,
+  LifeBuoy, LockKeyhole, Mail, Network, Phone, ShieldCheck, WalletCards, Workflow,
+} from "lucide-react";
+import { notFound } from "next/navigation";
 import { MarketingHeader } from "@/components/marketing/header";
+import { ExchangeDesk } from "@/components/marketing/exchange-desk";
+import { MarketTicker } from "@/components/marketing/market-ticker";
+import { SeoJsonLd } from "@/components/marketing/seo-json-ld";
+import { ClayAccountIcon, ClayRequestIcon, ClayVerifyIcon } from "@/components/marketing/clay-icons";
 import { Logo } from "@/components/ui/logo";
 import { PrelaunchBanner } from "@/components/ui/prelaunch-banner";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDictionary, isLocale } from "@/lib/i18n/dictionaries";
-import { notFound } from "next/navigation";
 import { getMarketSnapshot } from "@/lib/market-data";
-import { MarketTicker } from "@/components/marketing/market-ticker";
-import { ExchangeDesk } from "@/components/marketing/exchange-desk";
-import { ClayAccountIcon, ClayRequestIcon, ClayVerifyIcon } from "@/components/marketing/clay-icons";
-import { SeoJsonLd } from "@/components/marketing/seo-json-ld";
+import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/env";
+
+function contactValue(key: string) {
+  const value = process.env[key]?.trim();
+  return value || null;
+}
 
 export default async function MarketingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -23,37 +33,71 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
   const market = await getMarketSnapshot();
   const nonce = (await headers()).get("x-nonce") || undefined;
   const usdt = market.assets.find((asset) => asset.symbol === "USDT") || market.assets[0];
-  const features = ar
-    ? [
-        [Fingerprint, "هوية موثقة", "تسجيل آمن برابط البريد، 2FA، ومسار KYC للأفراد والشركات."],
-        [Workflow, "طلبات واضحة", "شراء وبيع وP2P مع مرجع موحد وحالة زمنية كاملة."],
-        [ScanLine, "إثباتات خاصة", "ملفات مشفرة، روابط مؤقتة، ومراجعة قابلة لإعادة التقديم."],
-        [ShieldCheck, "امتثال مدمج", "ضوابط صلاحيات، تنبيهات مخاطر، وسجل تدقيق غير قابل للتعديل."],
-      ]
-    : [
-        [Fingerprint, "Verified identity", "Secure email-link registration, 2FA and KYC workflows for people and businesses."],
-        [Workflow, "Structured requests", "Buy, sell and P2P requests with unified references and complete timelines."],
-        [ScanLine, "Private evidence", "Encrypted files, temporary links and review with resubmission support."],
-        [ShieldCheck, "Built-in compliance", "Least privilege, risk alerts and an immutable audit trail."],
-      ];
+
+  let paymentMethods: { name: string; code: string }[] = [];
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("payment_methods")
+      .select("code,name_ar,name_en")
+      .eq("active", true)
+      .order("sort_order");
+    if (!error && data?.length) {
+      paymentMethods = data.map((row) => ({ code: row.code, name: ar ? row.name_ar : row.name_en }));
+    }
+  }
+  if (!paymentMethods.length) {
+    paymentMethods = [
+      { code: "fib", name: "FIB" },
+      { code: "superqi", name: "SuperQi" },
+      { code: "zain_cash", name: "Zain Cash" },
+      { code: "bank_transfer", name: ar ? "تحويل بنكي" : "Bank Transfer" },
+      { code: "cash_representative", name: ar ? "مندوب نقدي" : "Cash Representative" },
+      { code: "wallet_transfer", name: ar ? "تحويل محفظة" : "Wallet Transfer" },
+    ];
+  }
+
+  const company = contactValue("NEXT_PUBLIC_COMPANY_NAME");
+  const supportEmail = contactValue("NEXT_PUBLIC_SUPPORT_EMAIL");
+  const whatsapp = contactValue("NEXT_PUBLIC_WHATSAPP_NUMBER");
+  const address = contactValue("NEXT_PUBLIC_COMPANY_ADDRESS");
+  const hours = contactValue("NEXT_PUBLIC_WORKING_HOURS");
+  const license = contactValue("NEXT_PUBLIC_TRADE_LICENSE_NUMBER");
+
   const steps = ar
     ? [
-        [ClayAccountIcon, "01", "أنشئ حساباً", "سجّل بالبريد وابدأ ملفك خلال دقائق."],
-        [ClayVerifyIcon, "02", "أكمل التحقق", "KYC مرة واحدة للأفراد أو الشركات مع وثائق خاصة."],
-        [ClayRequestIcon, "03", "أرسل طلباً للمراجعة", "شراء أو بيع USDT بمسار واضح دون تنفيذ مالي حقيقي."],
+        [ClayAccountIcon, "01", "أنشئ حساباً", "سجّل ببريدك وكلمة مرور قوية وابدأ ملفك."],
+        [ClayVerifyIcon, "02", "أكمل بياناتك وKYC", "ارفع الوثائق المطلوبة مرة واحدة للأفراد أو الشركات."],
+        [ClayRequestIcon, "03", "أنشئ طلباً وتابعه", "أرسل طلب شراء أو بيع وراقب المراجعة والإشعارات."],
       ]
     : [
-        [ClayAccountIcon, "01", "Create an account", "Register with email and start your profile in minutes."],
-        [ClayVerifyIcon, "02", "Verify once", "Complete individual or business KYC with private documents."],
-        [ClayRequestIcon, "03", "Submit for review", "Buy or sell USDT through a clear flow with no real execution yet."],
+        [ClayAccountIcon, "01", "Create an account", "Register with email and a strong password to start your profile."],
+        [ClayVerifyIcon, "02", "Complete profile & KYC", "Upload required documents once for individuals or businesses."],
+        [ClayRequestIcon, "03", "Submit and track", "Create a buy or sell request and follow review + notifications."],
+      ];
+
+  const services = ar
+    ? [
+        [WalletCards, "شراء USDT", "أنشئ طلب شراء للمراجعة الإدارية دون تنفيذ مالي حالياً."],
+        [CreditCard, "بيع USDT", "قدّم طلب بيع واضح مع الشبكة والغرض والمتابعة."],
+        [Handshake, "P2P مُدار", "حالات P2P بإشراف بشري دون إطلاق تلقائي."],
+        [BadgeCheck, "التحقق KYC", "مسار وثائق خاص ومراجعة منظمة."],
+        [Building2, "إثباتات الدفع", "رفع خاص وربط بالطلب ومراجعة واضحة."],
+        [LifeBuoy, "الدعم", "تذاكر موثقة ومتابعة الحالة."],
+      ]
+    : [
+        [WalletCards, "Buy USDT", "Create a buy request for administrative review with no financial execution yet."],
+        [CreditCard, "Sell USDT", "Submit a clear sell request with network, purpose and tracking."],
+        [Handshake, "Managed P2P", "Human-supervised P2P cases with no automatic release."],
+        [BadgeCheck, "KYC verification", "Private document flow with organised review."],
+        [Building2, "Payment proofs", "Private uploads linked to requests with clear review."],
+        [LifeBuoy, "Support", "Documented tickets and status tracking."],
       ];
 
   return (
     <>
       <SeoJsonLd locale={locale} nonce={nonce} />
-      <a className="skipLink" href="#main-content">
-        {ar ? "انتقل إلى المحتوى" : "Skip to content"}
-      </a>
+      <a className="skipLink" href="#main-content">{ar ? "انتقل إلى المحتوى" : "Skip to content"}</a>
       <PrelaunchBanner locale={locale} />
       <MarketingHeader locale={locale} dict={dict} />
       <MarketTicker locale={locale} initial={market} />
@@ -63,9 +107,7 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
           <div className="orb goldOrb" />
           <div className="shell heroGrid">
             <div className="heroCopy">
-              <p className="heroBrand" aria-label="Gulf Gate">
-                <Logo locale={locale} />
-              </p>
+              <p className="heroBrand" aria-label="Gulf Gate"><Logo locale={locale} /></p>
               <StatusBadge tone="warning">{dict.hero.badge}</StatusBadge>
               <h1>
                 {dict.hero.titleA}
@@ -73,39 +115,14 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
               </h1>
               <p>{dict.hero.text}</p>
               <div className="heroActions">
-                <Link className="primaryButton" href={`/${locale}/register`}>
-                  {dict.hero.primary}
-                  <Arrow size={18} />
-                </Link>
-                <a className="secondaryButton" href="#how-it-works">
-                  <ShieldCheck size={18} />
-                  {dict.hero.secondary}
-                </a>
+                <Link className="primaryButton" href={`/${locale}/register`}>{dict.hero.primary}<Arrow size={18} /></Link>
+                <Link className="secondaryButton" href={`/${locale}/login`}>{dict.nav.login}</Link>
+                <a className="textButton" href="#how-it-works">{dict.hero.secondary}</a>
               </div>
               <div className="trustRow">
-                <span>
-                  <CircleCheck /> {ar ? "لا تنفيذ مالي حقيقي" : "No real financial execution"}
-                </span>
-                <span>
-                  <CircleCheck /> {ar ? "KYC وتخزين خاص" : "KYC & private storage"}
-                </span>
-                <span>
-                  <CircleCheck /> {ar ? "مراجعة بشرية + تدقيق" : "Human review + audit"}
-                </span>
-              </div>
-              <div className="assetRow" aria-label={ar ? "الأصول المدعومة" : "Supported assets"}>
-                <span>
-                  <i className="assetUsdt" /> USDT
-                </span>
-                <span>
-                  <i className="assetBtc" /> BTC
-                </span>
-                <span>
-                  <i className="assetEth" /> ETH
-                </span>
-                <span>
-                  <i className="assetUsdc" /> USDC
-                </span>
+                <span><CircleCheck />{ar ? "المنصة قيد التجهيز" : "Platform being prepared"}</span>
+                <span><CircleCheck />{ar ? "لن يُطلب إرسال أموال الآن" : "No funds requested now"}</span>
+                <span><CircleCheck />{ar ? "مستنداتك محفوظة بشكل خاص" : "Your documents stay private"}</span>
               </div>
             </div>
             <ExchangeDesk
@@ -113,24 +130,45 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
               registerHref={`/${locale}/register`}
               rates={{
                 usdtUsd: usdt.usd,
-                usdtAed: usdt.aed || usdt.usd * 3.6725,
+                usdtAed: usdt.aed > 0 ? usdt.aed : usdt.usd * 3.6725,
                 usdtIqd: usdt.iqd > 0 ? usdt.iqd : 1310,
-                stale: market.stale || usdt.iqd <= 0,
+                stale: market.stale,
               }}
             />
+          </div>
+        </section>
+
+        <section id="platform" className="sectionBlock">
+          <div className="shell">
+            <div className="sectionTitle">
+              <span>{ar ? "ما هي Gulf Gate؟" : "What is Gulf Gate?"}</span>
+              <h2>{ar ? "منصة لإدارة طلبات الأصول الرقمية" : "A platform for managing digital-asset requests"}</h2>
+              <p>
+                {ar
+                  ? "تساعدك Gulf Gate على إنشاء ومتابعة طلبات شراء وبيع USDT وP2P المُدار، مع KYC وإثباتات الدفع والدعم — والطلبات حالياً إدارية وتجريبية فقط."
+                  : "Gulf Gate helps you create and track USDT buy/sell and managed P2P requests, with KYC, payment proofs and support — currently for administrative demo review only."}
+              </p>
+            </div>
+            <div className="featureGrid">
+              {services.map(([Icon, title, text]) => {
+                const ServiceIcon = Icon as typeof WalletCards;
+                return (
+                  <article className="featureCard" key={String(title)}>
+                    <div className="featureIcon"><ServiceIcon /></div>
+                    <h3>{String(title)}</h3>
+                    <p>{String(text)}</p>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         </section>
 
         <section id="how-it-works" className="sectionBlock stepsSection">
           <div className="shell">
             <div className="sectionTitle centered">
-              <span>{ar ? "كيف تبدأ" : "HOW IT WORKS"}</span>
-              <h2>{ar ? "ثلاث خطوات مرتبة وواضحة" : "Three tidy, clear steps"}</h2>
-              <p>
-                {ar
-                  ? "نفس الإحساس المنظّم لمنصة موثوقة — مع إبقاء التنفيذ مقفولاً قبل الإطلاق."
-                  : "The same organised desk feeling — while execution stays locked before launch."}
-              </p>
+              <span>{ar ? "كيف تعمل؟" : "How it works"}</span>
+              <h2>{ar ? "مسار واضح من الحساب إلى المتابعة" : "A clear path from account to follow-up"}</h2>
             </div>
             <div className="stepsGrid">
               {steps.map(([Icon, n, title, text]) => {
@@ -145,30 +183,38 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
                 );
               })}
             </div>
+            <ol className="plainSteps">
+              {(ar
+                ? ["إنشاء الحساب", "إكمال الملف", "إكمال KYC", "إنشاء الطلب", "مراجعة الطلب", "متابعة الحالة", "استلام الإشعارات"]
+                : ["Create account", "Complete profile", "Complete KYC", "Create request", "Request review", "Track status", "Receive notifications"]
+              ).map((item, index) => <li key={item}><b>{index + 1}.</b> {item}</li>)}
+            </ol>
           </div>
         </section>
 
-        <section id="platform" className="sectionBlock">
+        <section id="payments" className="sectionBlock darkPanel">
+          <div className="shell securityGrid">
+            <div>
+              <span className="sectionKicker">{ar ? "طرق الدفع" : "Payment methods"}</span>
+              <h2>{ar ? "طرق الدفع المخطط دعمها" : "Planned payment methods"}</h2>
+              <p>{ar ? "نعرض الطرق النشطة للإعداد والتجربة فقط. لا تُطلب تحويلات حقيقية في هذه المرحلة." : "Active methods are shown for setup and testing only. Real transfers are not requested at this stage."}</p>
+            </div>
+            <div className="chipGrid">
+              {paymentMethods.map((method) => <span className="infoChip" key={method.code}><CreditCard size={16} />{method.name}</span>)}
+            </div>
+          </div>
+        </section>
+
+        <section id="networks" className="sectionBlock">
           <div className="shell">
             <div className="sectionTitle">
-              <span>01 / PLATFORM</span>
-              <h2>{ar ? "نظام عمليات مالي، وليس مجرد واجهة" : "A financial operations system, not just an interface"}</h2>
-              <p>{ar ? "كل خطوة مصممة لتكون قابلة للتحقق والمراجعة والتدقيق." : "Every step is designed to be verifiable, reviewable and auditable."}</p>
+              <span>{ar ? "الشبكات" : "Networks"}</span>
+              <h2>{ar ? "TRC20 و ERC20" : "TRC20 and ERC20"}</h2>
+              <p>{ar ? "يجب أن تطابق شبكة الطلب عنوان المحفظة المحدد. أي اختلاف قد يؤخر المراجعة." : "The request network must match the selected wallet address. Any mismatch can delay review."}</p>
             </div>
-            <div className="featureGrid">
-              {features.map(([Icon, title, text], index) => {
-                const FeatureIcon = Icon as typeof Fingerprint;
-                return (
-                  <article className="featureCard" key={String(title)}>
-                    <div className="featureIcon">
-                      <FeatureIcon />
-                    </div>
-                    <span>0{index + 1}</span>
-                    <h3>{String(title)}</h3>
-                    <p>{String(text)}</p>
-                  </article>
-                );
-              })}
+            <div className="gateGrid">
+              <div className="gate"><span>01</span><div><Network /><h3>TRC20</h3><p>{ar ? "عناوين تبدأ بـ T بطول 34 حرفاً." : "Addresses start with T and are 34 characters."}</p></div></div>
+              <div className="gate"><span>02</span><div><Network /><h3>ERC20</h3><p>{ar ? "عناوين تبدأ بـ 0x بطول 42 حرفاً." : "Addresses start with 0x and are 42 characters."}</p></div></div>
             </div>
           </div>
         </section>
@@ -176,34 +222,26 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
         <section id="security" className="sectionBlock darkPanel">
           <div className="shell securityGrid">
             <div>
-              <span className="sectionKicker">02 / SECURITY</span>
-              <h2>{ar ? "الأمان جزء من المعمارية" : "Security is part of the architecture"}</h2>
-              <p>
-                {ar
-                  ? "البيانات الحساسة لا تُرسل إلى الواجهة، والملفات تبقى خاصة، وكل صلاحية محدودة بالدور."
-                  : "Sensitive data stays off the frontend, files remain private, and every permission is constrained by role."}
-              </p>
-              <Link className="secondaryButton inverted" href={`/${locale}/register`}>
-                {ar ? "استكشف الحساب" : "Explore account"}
+              <span className="sectionKicker">{ar ? "الأمان والخصوصية" : "Security & privacy"}</span>
+              <h2>{ar ? "حماية عملية بلغة مفهومة" : "Practical protection in plain language"}</h2>
+              <p>{ar ? "وصول محدود حسب الصلاحية، ملفات خاصة، سجل مراجعة، وحماية الحساب. التفاصيل التقنية متاحة في صفحة الأمان والامتثال." : "Access is limited by role, files stay private, reviews are logged, and accounts are protected. Technical detail lives on the security & compliance page."}</p>
+              <Link className="secondaryButton inverted" href={`/${locale}/security-compliance`}>
+                {ar ? "تفاصيل الأمان والامتثال" : "Security & compliance details"}
                 <Arrow />
               </Link>
             </div>
             <div className="securityStack">
               {[
-                [LockKeyhole, ar ? "جلسات آمنة و2FA" : "Secure sessions & 2FA", "AAL2"],
-                [Landmark, ar ? "تخزين خاص وروابط مؤقتة" : "Private storage & signed links", "60 SEC"],
-                [Gauge, ar ? "تحديد معدلات الطلب" : "Database-backed rate limits", "ENFORCED"],
-                [BadgeCheck, ar ? "سجل غير قابل للتعديل" : "Immutable audit log", "APPEND ONLY"],
+                [LockKeyhole, ar ? "جلسات آمنة" : "Secure sessions", ar ? "حماية الدخول" : "Sign-in protection"],
+                [ShieldCheck, ar ? "مستندات خاصة" : "Private documents", ar ? "وصول محدود" : "Limited access"],
+                [Workflow, ar ? "سجل مراجعة" : "Review trail", ar ? "قابل للمتابعة" : "Traceable"],
+                [BadgeCheck, ar ? "بدون مفاتيح محافظ" : "No wallet keys stored", ar ? "لا حفظ للمفاتيح" : "Keys never stored"],
               ].map(([Icon, title, tag]) => {
                 const SecurityIcon = Icon as typeof LockKeyhole;
                 return (
                   <div key={String(title)}>
                     <SecurityIcon />
-                    <span>
-                      <b>{String(title)}</b>
-                      <small>{ar ? "ضبط قابل للإثبات والمراجعة" : "Provable, reviewable control"}</small>
-                    </span>
-                    <em>{String(tag)}</em>
+                    <span><b>{String(title)}</b><small>{String(tag)}</small></span>
                   </div>
                 );
               })}
@@ -211,85 +249,104 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
           </div>
         </section>
 
-        <section id="compliance" className="sectionBlock">
-          <div className="shell">
-            <div className="sectionTitle centered">
-              <span>03 / CONTROL</span>
-              <h2>{ar ? "التنفيذ الحقيقي يحتاج أربع بوابات" : "Real execution requires four gates"}</h2>
+        <section id="faq" className="sectionBlock faqSection">
+          <div className="shell faqGrid">
+            <div className="sectionTitle">
+              <span>{ar ? "الأسئلة الشائعة" : "FAQ"}</span>
+              <h2>{ar ? "إجابات مباشرة" : "Direct answers"}</h2>
             </div>
-            <div className="gateGrid">
-              {[
-                ["01", ar ? "موافقة قانونية" : "Legal approval"],
-                ["02", ar ? "مسؤول امتثال" : "Compliance sign-off"],
-                ["03", ar ? "Super Admin + 2FA" : "Super Admin + 2FA"],
-                ["04", ar ? "تفعيل قاعدة البيانات" : "Database activation"],
-              ].map(([n, t], i) => (
-                <div key={n} className={i === 3 ? "gate lockedGate" : "gate"}>
-                  <span>{n}</span>
-                  <div>
-                    {i === 3 ? <LockKeyhole /> : <Zap />}
-                    <h3>{t}</h3>
-                    <p>{ar ? "لا يمكن تجاوز هذه البوابة من الواجهة." : "This gate cannot be bypassed from the frontend."}</p>
-                  </div>
-                </div>
+            <div className="faqList">
+              {(ar
+                ? [
+                    ["هل الخدمة مرخصة؟", "لا تدّعي Gulf Gate امتلاك ترخيص لخدمات الأصول الافتراضية حالياً. تبقى الخدمة في وضع ما قبل الإطلاق."],
+                    ["هل يمكن إرسال أموال الآن؟", "لا. لن يُطلب منك إرسال أي أموال خلال مرحلة ما قبل الإطلاق."],
+                    ["هل الأسعار ملزمة؟", "لا. الأسعار المعروضة استرشادية فقط وليست عرض شراء أو بيع ملزماً."],
+                    ["كيف يتم KYC؟", "تكمل بياناتك وترفع الوثائق المطلوبة، ثم تُراجع يدوياً داخل المنصة."],
+                    ["كيف تُحفظ الوثائق؟", "تُحفظ في مساحة خاصة بوصول محدود عبر صلاحيات الحساب، وروابط مؤقتة عند الحاجة."],
+                    ["ما هي الشبكات؟", "حالياً TRC20 وERC20، ويجب أن تطابق شبكة الطلب عنوان المحفظة."],
+                    ["كيف أفتح تذكرة؟", "من لوحة العميل → الدعم، اختر الفئة واكتب الموضوع والرسالة."],
+                    ["كيف أحذف حسابي؟", "من الأمان يمكنك طلب حذف الحساب ليراجعه الفريق وفق المتطلبات القانونية."],
+                    ["ماذا يحدث عند رفض الوثيقة؟", "تصلك حالة واضحة وسبب مناسب للعميل، ويمكنك إعادة الرفع عند الحاجة."],
+                    ["كيف أعرف حالة الطلب؟", "من سجل الطلبات والإشعارات داخل لوحة العميل."],
+                  ]
+                : [
+                    ["Is the service licensed?", "Gulf Gate does not claim to hold a virtual-asset licence today. The service remains pre-launch."],
+                    ["Can I send funds now?", "No. You will not be asked to send funds during pre-launch."],
+                    ["Are prices binding?", "No. Shown prices are indicative only and not a binding buy or sell offer."],
+                    ["How does KYC work?", "Complete your details, upload required documents, then the file is reviewed manually."],
+                    ["How are documents stored?", "In private storage with account-based access limits and short-lived links when needed."],
+                    ["Which networks?", "TRC20 and ERC20 for now, and the request network must match the wallet address."],
+                    ["How do I open a ticket?", "From the client dashboard → Support, choose a category and submit your message."],
+                    ["How do I delete my account?", "From Security you can request deletion for staff review under legal retention rules."],
+                    ["What if a document is rejected?", "You receive a clear customer-facing reason and can resubmit when needed."],
+                    ["How do I know my request status?", "From Orders and Notifications in the client dashboard."],
+                  ]
+              ).map(([q, a], index) => (
+                <details key={q} open={index === 0}>
+                  <summary>{q}</summary>
+                  <p>{a}</p>
+                </details>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="faq" className="sectionBlock faqSection">
-          <div className="shell faqGrid">
+        <section id="contact" className="sectionBlock">
+          <div className="shell">
             <div className="sectionTitle">
-              <span>04 / FAQ</span>
-              <h2>{ar ? "أسئلة مهمة" : "Important questions"}</h2>
+              <span>{ar ? "التواصل والثقة" : "Contact & trust"}</span>
+              <h2>{ar ? "قنوات واضحة عند توفرها" : "Clear channels when configured"}</h2>
             </div>
-            <div className="faqList">
-              <details open>
-                <summary>{ar ? "هل Gulf Gate مرخصة؟" : "Is Gulf Gate licensed?"}</summary>
-                <p>
-                  {ar
-                    ? "لا تدّعي Gulf Gate امتلاك ترخيص لخدمات الأصول الافتراضية حالياً. تبقى الخدمة في وضع ما قبل الإطلاق."
-                    : "Gulf Gate does not claim to hold a virtual asset services licence. The service remains in pre-launch mode."}
-                </p>
-              </details>
-              <details>
-                <summary>{ar ? "هل يمكن تنفيذ طلب حقيقي؟" : "Can a real request be executed?"}</summary>
-                <p>
-                  {ar
-                    ? "لا. يمكن بناء الطلب ومراجعته فقط، بينما الإيداع والدفع والتحويل وإطلاق الأصل مقفول."
-                    : "No. Requests can be prepared and reviewed, while deposits, payouts, transfers and asset release remain locked."}
-                </p>
-              </details>
-              <details>
-                <summary>{ar ? "كيف تُحفظ الوثائق؟" : "How are documents stored?"}</summary>
-                <p>{ar ? "في حاويات خاصة مع سياسات RLS وروابط وصول مؤقتة موقعة." : "In private buckets protected by RLS and short-lived signed access links."}</p>
-              </details>
+            <div className="contactGrid">
+              {company && <article><Building2 /><span>{ar ? "الاسم القانوني" : "Legal name"}</span><strong>{company}</strong></article>}
+              {supportEmail && <article><Mail /><span>{ar ? "بريد الدعم" : "Support email"}</span><a href={`mailto:${supportEmail}`}>{supportEmail}</a></article>}
+              {whatsapp && <article><Phone /><span>WhatsApp</span><a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`} rel="noreferrer" target="_blank">{whatsapp}</a></article>}
+              {hours && <article><LifeBuoy /><span>{ar ? "ساعات العمل" : "Working hours"}</span><strong>{hours}</strong></article>}
+              {address && <article><Building2 /><span>{ar ? "العنوان" : "Address"}</span><strong>{address}</strong></article>}
+              {license && <article><BadgeCheck /><span>{ar ? "رقم الرخصة" : "Trade licence"}</span><strong>{license}</strong></article>}
+              {!company && !supportEmail && !whatsapp && !hours && !address && !license && (
+                <p className="formNotice">{ar ? "بيانات التواصل تُعرض هنا بعد إعدادها في بيئة التشغيل." : "Contact details appear here once configured in the environment."}</p>
+              )}
+            </div>
+            <div className="headingActions" style={{ marginTop: 18 }}>
+              <Link href={`/${locale}/legal/privacy`}>{ar ? "الخصوصية" : "Privacy"}</Link>
+              <Link href={`/${locale}/legal/terms`}>{ar ? "الشروط" : "Terms"}</Link>
+              <Link href={`/${locale}/legal/risk`}>{ar ? "المخاطر" : "Risk"}</Link>
+              <Link href={`/${locale}/login?next=/${locale}/dashboard/support`}>{ar ? "الشكاوى / الدعم" : "Complaints / support"}</Link>
             </div>
           </div>
         </section>
       </main>
+
       <footer className="mainFooter">
         <div className="shell footerGrid">
           <div>
             <Logo locale={locale} />
-            <p>{ar ? "منصة إدارة طلبات أصول رقمية قيد التجهيز." : "A digital-asset request management platform in development."}</p>
+            <p>{ar ? "منصة لإدارة طلبات الأصول الرقمية — قيد التجهيز قبل الإطلاق." : "Digital-asset request management platform — being prepared for launch."}</p>
+          </div>
+          <div>
+            <h3>{ar ? "المنصة" : "Platform"}</h3>
+            <a href="#platform">{ar ? "الخدمات" : "Services"}</a>
+            <a href="#how-it-works">{ar ? "كيف تعمل" : "How it works"}</a>
+            <Link href={`/${locale}/security-compliance`}>{ar ? "الأمان" : "Security"}</Link>
           </div>
           <div>
             <h3>{ar ? "قانوني" : "Legal"}</h3>
-            <Link href={`/${locale}/legal/risk`}>{ar ? "إفصاح المخاطر" : "Risk disclosure"}</Link>
+            <Link href={`/${locale}/legal/terms`}>{ar ? "الشروط" : "Terms"}</Link>
             <Link href={`/${locale}/legal/privacy`}>{ar ? "الخصوصية" : "Privacy"}</Link>
-            <Link href={`/${locale}/legal/terms`}>{ar ? "شروط الاستخدام" : "Terms"}</Link>
+            <Link href={`/${locale}/legal/risk`}>{ar ? "المخاطر" : "Risk"}</Link>
           </div>
           <div className="footerLock">
             <LockKeyhole />
             <span>
-              <b>{ar ? "وضع ما قبل الإطلاق" : "Pre-launch mode"}</b>
+              <b>{ar ? "حالة الخدمة: تجهيز" : "Service state: preparing"}</b>
               <small>{ar ? "لا معاملات مالية حقيقية" : "No real financial transactions"}</small>
             </span>
           </div>
         </div>
         <div className="shell footerBottom">
           <span>© 2026 Gulf Gate</span>
+          <Link href={locale === "ar" ? "/en" : "/ar"}>{locale === "ar" ? "English" : "العربية"}</Link>
           <span>{ar ? "معلومات عامة فقط — ليست عرضاً أو توصية" : "General information only — not an offer or recommendation"}</span>
         </div>
       </footer>

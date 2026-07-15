@@ -1,15 +1,38 @@
 import type { MetadataRoute } from "next";
 import { getSiteOrigin } from "@/lib/site";
 
-const LEGAL_VERSION_DATE=new Date("2026-07-15T00:00:00.000Z");
+const LEGAL_VERSION_DATE = new Date("2026-07-15T00:00:00.000Z");
 
-export default function sitemap():MetadataRoute.Sitemap{
-  const base=getSiteOrigin();
-  return ["/ar","/en","/ar/legal/terms","/en/legal/terms","/ar/legal/privacy","/en/legal/privacy","/ar/legal/risk","/en/legal/risk"].map(path=>({
-    url:`${base}${path}`,
-    lastModified:LEGAL_VERSION_DATE,
-    changeFrequency:path==="/ar"||path==="/en"?"daily" as const:"monthly" as const,
-    priority:path==="/ar"||path==="/en"?1:.5,
-    alternates:{languages:{ar:`${base}/ar${path.includes("/legal/")?path.slice(3):""}`,en:`${base}/en${path.includes("/legal/")?path.slice(3):""}`}},
-  }));
+export default function sitemap(): MetadataRoute.Sitemap {
+  const base = getSiteOrigin();
+  const entries = [
+    { path: "/ar", priority: 1 },
+    { path: "/en", priority: 1 },
+    { path: "/ar/security-compliance", priority: 0.8 },
+    { path: "/en/security-compliance", priority: 0.8 },
+    { path: "/ar/legal/terms", priority: 0.5 },
+    { path: "/en/legal/terms", priority: 0.5 },
+    { path: "/ar/legal/privacy", priority: 0.5 },
+    { path: "/en/legal/privacy", priority: 0.5 },
+    { path: "/ar/legal/risk", priority: 0.5 },
+    { path: "/en/legal/risk", priority: 0.5 },
+  ] as const;
+
+  return entries.map(({ path, priority }) => {
+    const isHome = path === "/ar" || path === "/en";
+    const suffix = path.replace(/^\/(ar|en)/, "") || "";
+    return {
+      url: `${base}${path}`,
+      lastModified: LEGAL_VERSION_DATE,
+      changeFrequency: isHome ? ("daily" as const) : ("monthly" as const),
+      priority,
+      alternates: {
+        languages: {
+          "ar-IQ": `${base}/ar${suffix}`,
+          "en-IQ": `${base}/en${suffix}`,
+          "x-default": `${base}/ar${suffix}`,
+        },
+      },
+    };
+  });
 }

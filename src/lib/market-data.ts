@@ -1,26 +1,92 @@
 import "server-only";
+import { deriveIqd, getUsdToAedRate, getUsdToIqdRate, normalizeQuote } from "@/lib/market-quotes";
 
-export type MarketAsset = { symbol:string; name:string; usd:number; aed:number; iqd:number; change24h:number|null; updatedAt:string };
-export type MarketSnapshot = { assets:MarketAsset[]; source:"coingecko"|"fallback"; stale:boolean; fetchedAt:string };
+export type MarketAsset = {
+  symbol: string;
+  name: string;
+  usd: number;
+  aed: number;
+  iqd: number;
+  change24h: number | null;
+  updatedAt: string;
+};
 
-const coins=[
-  {id:"tether",symbol:"USDT",name:"Tether"},
-  {id:"bitcoin",symbol:"BTC",name:"Bitcoin"},
-  {id:"ethereum",symbol:"ETH",name:"Ethereum"},
-  {id:"usd-coin",symbol:"USDC",name:"USD Coin"},
+export type MarketSnapshot = {
+  assets: MarketAsset[];
+  source: "coingecko" | "coingecko+fx" | "fallback";
+  stale: boolean;
+  fetchedAt: string;
+  fxNote?: string;
+};
+
+const coins = [
+  { id: "tether", symbol: "USDT", name: "Tether" },
+  { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
+  { id: "usd-coin", symbol: "USDC", name: "USD Coin" },
 ] as const;
 
-export async function getMarketSnapshot():Promise<MarketSnapshot>{
-  const key=process.env.COINGECKO_DEMO_API_KEY?.trim();
-  const url="https://api.coingecko.com/api/v3/simple/price?ids=tether,bitcoin,ethereum,usd-coin&vs_currencies=usd,aed,iqd&include_24hr_change=true&include_last_updated_at=true&precision=full";
-  try{
-    const response=await fetch(url,{headers:key?{"x-cg-demo-api-key":key}:{},next:{revalidate:60}});
-    if(!response.ok)throw new Error(`MARKET_PROVIDER_${response.status}`);
-    const body=await response.json() as Record<string,Record<string,number|null>>;
-    const assets=coins.map(coin=>{const row=body[coin.id];if(!row||typeof row.usd!=="number")throw new Error("INVALID_MARKET_RESPONSE");return {symbol:coin.symbol,name:coin.name,usd:row.usd,aed:Number(row.aed||0),iqd:Number(row.iqd||0),change24h:typeof row.usd_24h_change==="number"?row.usd_24h_change:null,updatedAt:new Date(Number(row.last_updated_at||Date.now()/1000)*1000).toISOString()};});
-    return {assets,source:"coingecko",stale:false,fetchedAt:new Date().toISOString()};
-  }catch{
-    const now=new Date().toISOString();
-    return {assets:[{symbol:"USDT",name:"Tether",usd:1,aed:3.6725,iqd:1310,change24h:null,updatedAt:now}],source:"fallback",stale:true,fetchedAt:now};
+function marketTimeoutMs() {
+  const raw = Number(process.env.MARKET_PROVIDER_TIMEOUT_MS || 4000);
+  return Number.isFinite(raw) && raw >= 1000 && raw <= 15_000 ? raw : 4000;
+}
+
+function fallbackAssets(now: string): MarketAsset[] {
+  const usdIqd = getUsdToIqdRate();
+  const usdAed = getUsdToAedRate();
+  return [
+    { symbol: "USDT", name: "Tether", usd: 1, aed: usdAed, iqd: usdIqd, change24h: null, updatedAt: now },
+    { symbol: "BTC", name: "Bitcoin", usd: 65000, aed: 65000 * usdAed, iqd: 65000 * usdIqd, change24h: null, updatedAt: now },
+    { symbol: "ETH", name: "Ethereum", usd: 3500, aed: 3500 * usdAed, iqd: 3500 * usdIqd, change24h: null, updatedAt: now },
+    { symbol: "USDC", name: "USD Coin", usd: 1, aed: usdAed, iqd: usdIqd, change24h: null, updatedAt: now },
+  ];
+}
+
+export async function getMarketSnapshot(): Promise<MarketSnapshot> {
+  const key = process.env.COINGECKO_DEMO_API_KEY?.trim();
+  const url =
+    "https://api.coingecko.com/api/v3/simple/price?ids=tether,bitcoin,ethereum,usd-coin&vs_currencies=usd,aed&include_24hr_change=true&include_last_updated_at=true&precision=full";
+  try {
+    const response = await fetch(url, {
+      headers: key ? { "x-cg-demo-api-key": key } : {},
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(marketTimeoutMs()),
+    });
+    if (!response.ok) throw new Error(`MARKET_PROVIDER_${response.status}`);
+    const body = (await response.json()) as Record<string, Record<string, number | null>>;
+    let derivedIqd = false;
+    const assets = coins.map((coin) => {
+      const row = body[coin.id];
+      const usd = normalizeQuote(row?.usd);
+      if (!usd) throw new Error("INVALID_MARKET_RESPONSE");
+      const aed = normalizeQuote(row?.aed) ?? usd * getUsdToAedRate();
+      const { iqd, derived } = deriveIqd(usd, normalizeQuote(row?.iqd));
+      if (derived) derivedIqd = true;
+      return {
+        symbol: coin.symbol,
+        name: coin.name,
+        usd,
+        aed,
+        iqd,
+        change24h: typeof row?.usd_24h_change === "number" ? row.usd_24h_change : null,
+        updatedAt: new Date(Number(row?.last_updated_at || Date.now() / 1000) * 1000).toISOString(),
+      };
+    });
+    return {
+      assets,
+      source: derivedIqd ? "coingecko+fx" : "coingecko",
+      stale: derivedIqd,
+      fetchedAt: new Date().toISOString(),
+      fxNote: derivedIqd ? `USD×${getUsdToIqdRate()} IQD` : undefined,
+    };
+  } catch {
+    const now = new Date().toISOString();
+    return {
+      assets: fallbackAssets(now),
+      source: "fallback",
+      stale: true,
+      fetchedAt: now,
+      fxNote: `USD×${getUsdToIqdRate()} IQD`,
+    };
   }
 }

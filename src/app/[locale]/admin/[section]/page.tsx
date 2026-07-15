@@ -44,7 +44,7 @@ async function loadSection(section:Section) {
     case "compliance":table="risk_flags";columns="id,user_id,order_id,p2p_order_id,severity,status,code,summary,assigned_to,created_at";break;
     case "disputes":table="disputes";columns="id,p2p_order_id,opened_by,status,reason,assigned_to,created_at";break;
     case "support":table="support_tickets";columns="id,reference_number,user_id,subject,category,priority,status,created_at";break;
-    case "notifications":table="notifications";columns="id,user_id,type,title_ar,title_en,read_at,created_at";break;
+    case "notifications":table="notifications";columns="id,user_id,kind,title_ar,title_en,read_at,created_at";break;
     case "staff":case "roles":table="staff_roles";columns="user_id,role,granted_by,granted_at";break;
     case "audit":table="audit_logs";columns="id,actor_id,actor_role,action,entity_type,entity_id,created_at";break;
     case "legal":table="legal_content";columns="key,version,title_ar,title_en,published,effective_at,updated_at";break;

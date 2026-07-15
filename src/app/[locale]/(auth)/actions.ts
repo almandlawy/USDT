@@ -112,7 +112,8 @@ export async function resetPasswordAction(formData: FormData) {
   const email = String(formData.get("email") || "");
   if (!email.includes("@")) authError(locale, "reset-password", "invalid_email");
   const supabase = await createClient();
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${getSiteOrigin()}/auth/callback?next=/${locale}/reset-password%3Fmode%3Dupdate` });
+  const next = encodeURIComponent(`/${locale}/reset-password?mode=update`);
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${getSiteOrigin()}/auth/callback?next=${next}` });
   redirect(`/${locale}/reset-password?sent=true`);
 }
 
@@ -120,8 +121,18 @@ export async function updatePasswordAction(formData: FormData){
   const locale=String(formData.get("locale")||"ar");await secureAuthRequest("password-update");if(!isSupabaseConfigured())authError(locale,"reset-password","configuration");const password=String(formData.get("password")||"");const confirmation=String(formData.get("confirmation")||"");if(password!==confirmation||!passwordSchema.safeParse(password).success)authError(locale,"reset-password","invalid_password");const supabase=await createClient();const {data}=await supabase.auth.getUser();if(!data.user)authError(locale,"reset-password","session_required");const {error}=await supabase.auth.updateUser({password});if(error)authError(locale,"reset-password","update_failed");redirect(`/${locale}/login?password_updated=true`);
 }
 
-export async function resendOtpAction(formData:FormData){
-  const locale=String(formData.get("locale")||"ar");await secureAuthRequest("otp-resend");if(!isSupabaseConfigured())authError(locale,"verify","configuration");const identifier=String(formData.get("identifier")||"");if(!authIdentifierSchema.safeParse(identifier).success)authError(locale,"verify","invalid_identifier");const supabase=await createClient();const payload=identifier.includes("@")?{type:"signup" as const,email:identifier}:{type:"sms" as const,phone:identifier};const {error}=await supabase.auth.resend(payload);if(error)authError(locale,"verify","resend_failed");redirect(`/${locale}/verify?identifier=${encodeURIComponent(identifier)}&resent=true`);
+export async function resendOtpAction(formData: FormData) {
+  const locale = String(formData.get("locale") || "ar");
+  await guardAuthRequest(locale, "verify", "otp-resend");
+  if (!isSupabaseConfigured()) authError(locale, "verify", "configuration");
+  const identifier = String(formData.get("identifier") || "");
+  if (!identifier.includes("@") || !authIdentifierSchema.safeParse(identifier).success) {
+    authError(locale, "verify", "invalid_identifier");
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({ type: "signup", email: identifier });
+  if (error) authError(locale, "verify", "resend_failed");
+  redirect(`/${locale}/verify?identifier=${encodeURIComponent(identifier)}&resent=true`);
 }
 
 export async function signOutAction(formData: FormData) {
