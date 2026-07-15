@@ -280,7 +280,28 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
 [dir="rtl"] .appSidebar { grid-column: 2; grid-row: 1; }
 [dir="rtl"] .appMain { grid-column: 1; grid-row: 1; }
 .appSidebar { height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; overflow: auto; background: #07111f; border-inline-end: 1px solid var(--line); }
-.sidebarBrand { padding: 22px 20px 17px; }
+.sidebarBrand { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 22px 20px 17px; }
+.drawerClose, .mobileNavTrigger, .drawerBackdrop { display: none; }
+.mobileNavTrigger { place-items: center; padding: 8px; color: #8094a8; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.02); }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.uiSkeleton { border-radius: 10px; background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.09), rgba(255,255,255,.04)); background-size: 200% 100%; animation: skeleton 1.4s linear infinite; }
+@keyframes skeleton { to { background-position: -200% 0; } }
+.pageSkeleton { display: grid; gap: 14px; }
+.skelTitle { height: 34px; width: min(320px, 70%); }
+.skelLine { height: 14px; width: min(520px, 90%); }
+.skelGrid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.skelCard { height: 120px; }
+.skelPanel { height: 280px; }
+.chipGrid, .contactGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.infoChip, .contactGrid article { display: flex; align-items: center; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
+.contactGrid article { display: grid; gap: 4px; }
+.contactGrid span { color: #7f93a8; font-size: 11px; }
+.plainSteps { display: grid; gap: 8px; margin-top: 22px; color: #9aadc0; font-size: 13px; }
+.formNoticeBox { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.03); color: #b7c6d4; }
+.fieldHint, .fieldError { display: block; margin-top: 6px; font-size: 11px; }
+.fieldError { color: #ff8f8f; }
+.buttonSpinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .workspaceLabel { margin: 0 20px 10px; padding-top: 15px; color: #5f748a; border-top: 1px solid var(--line); font: 9px ui-monospace, monospace; letter-spacing: .16em; }
 .sideNav { display: grid; gap: 2px; padding: 0 12px 14px; }
 .sideNav a { min-height: 42px; display: flex; align-items: center; gap: 11px; padding: 0 11px; color: #8da0b4; border-radius: 9px; font-size: 12px; font-weight: 650; }
@@ -537,11 +558,25 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
   .authMobileLogo { display: block; margin-bottom: 22px; }
   .authCard { padding: 26px 20px; }
   .appFrame, [dir="rtl"] .appFrame { display: block; }
-  .appSidebar { display: none; }
+  .appSidebar {
+    display: flex;
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 80;
+    width: min(300px, 88vw);
+    transform: translateX(-105%);
+    transition: transform .22s ease;
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
+  }
+  [dir="rtl"] .appSidebar { transform: translateX(105%); }
+  .appSidebar.open { transform: translateX(0); }
+  .drawerClose, .mobileNavTrigger { display: grid; }
+  .drawerBackdrop { display: block; position: fixed; inset: 0; z-index: 70; border: 0; background: rgba(2,8,16,.55); }
   .appMain, [dir="rtl"] .appMain { display: block; }
-  .appTopbar { padding: 0 15px; }
-  .mobileNav { display: block; }
+  .appTopbar { padding: 0 15px; gap: 12px; }
   .appContent { padding: 20px 14px 40px; }
+  .skelGrid { grid-template-columns: 1fr 1fr; }
   .pageHeading { align-items: flex-start; flex-direction: column; }
   .headingActions { width: 100%; }
   .headingActions a { flex: 1; }
