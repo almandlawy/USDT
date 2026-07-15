@@ -8,7 +8,9 @@ export async function proxy(request: NextRequest) {
   const hasLocale = LOCALES.some((locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`));
 
   if (!hasLocale) {
-    const locale = request.headers.get("accept-language")?.toLowerCase().startsWith("en") ? "en" : "ar";
+    // Production entrypoint must land on Arabic by default.
+    // English remains available explicitly at /en.
+    const locale = pathname === "/" ? "ar" : request.headers.get("accept-language")?.toLowerCase().startsWith("en") ? "en" : "ar";
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
     return NextResponse.redirect(url);
