@@ -150,11 +150,11 @@ svg { flex: 0 0 auto; }
 .stepCard > span { position: absolute; top: 22px; inset-inline-end: 22px; color: #9aafa2; font: 750 11px ui-monospace, monospace; letter-spacing: .12em; }
 .stepCard h3 { margin: 18px 0 10px; font-size: 22px; color: #10271c; }
 .stepCard p { color: #667a6f; font-size: 14px; line-height: 1.75; }
-.clayIcon { width: 84px; height: 84px; position: relative; display: grid; place-items: center; border-radius: 28px; color: #04160f; background: linear-gradient(145deg, #9affc0, #1fbf7a 55%, #0f7a52); box-shadow: 0 16px 28px rgba(31,191,122,.28), inset 0 1px 0 rgba(255,255,255,.35); animation: clayFloat 4.8s ease-in-out infinite; }
-.clayIcon svg { width: 46px; height: 46px; position: relative; z-index: 1; }
-.claySheen { position: absolute; inset: 8px; border-radius: 22px; background: linear-gradient(135deg, rgba(255,255,255,.35), transparent 55%); }
-.stepCard:nth-child(2) .clayIcon { animation-delay: .4s; }
-.stepCard:nth-child(3) .clayIcon { animation-delay: .8s; }
+.clayIconMedia { width: 112px; height: 112px; display: grid; place-items: center; border-radius: 28px; overflow: hidden; background: #04160f; box-shadow: 0 18px 34px rgba(16,48,34,.16); animation: clayFloat 4.8s ease-in-out infinite; }
+.clayIconImg { width: 112px; height: 112px; object-fit: cover; display: block; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.stepCard:nth-child(2) .clayIconMedia { animation-delay: .4s; }
+.stepCard:nth-child(3) .clayIconMedia { animation-delay: .8s; }
 @keyframes riseIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @keyframes deskIn { from { opacity: 0; transform: translateY(24px) scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes clayFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }

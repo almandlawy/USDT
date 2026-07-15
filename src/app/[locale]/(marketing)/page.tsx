@@ -130,7 +130,7 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
                 const StepIcon = Icon as typeof ClayAccountIcon;
                 return (
                   <article className="stepCard" key={String(n)}>
-                    <StepIcon />
+                    <StepIcon label={String(title)} />
                     <span>{String(n)}</span>
                     <h3>{String(title)}</h3>
                     <p>{String(text)}</p>
