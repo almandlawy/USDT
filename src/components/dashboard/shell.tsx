@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Bell, LayoutDashboard, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2,
   History, LifeBuoy, Shield, LogOut, Users, CreditCard, BadgeDollarSign, TriangleAlert, Headphones,
-  UserCog, ScrollText, Settings, Menu, Wallet, Scale, Flag, Gavel, SlidersHorizontal, ListTodo, BrainCircuit,
+  UserCog, ScrollText, Settings, Menu, Wallet, Scale, Flag, Gavel, SlidersHorizontal, ListTodo, BrainCircuit, X,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { PrelaunchBanner } from "@/components/ui/prelaunch-banner";
@@ -46,6 +47,7 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname() || `/${locale}/${admin ? "admin" : "dashboard"}`;
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const other = locale === "ar" ? "en" : "ar";
   const localeSwitchHref = pathname.replace(new RegExp(`^/${locale}(?=/|$)`), `/${other}`) || `/${other}/${admin ? "admin" : "dashboard"}`;
   const base = `/${locale}/${admin ? "admin" : "dashboard"}`;
@@ -60,12 +62,22 @@ export function DashboardShell({
   const unread = badgeLabel(unreadCount);
   const portalLabel = admin ? dict.admin.title : dict.dashboard.portal;
 
+  useEffect(() => {
+    document.body.classList.toggle("drawerOpen", drawerOpen);
+    return () => document.body.classList.remove("drawerOpen");
+  }, [drawerOpen]);
+
   return (
     <div className="appFrame">
-      <aside className="appSidebar">
-        <div className="sidebarBrand"><Logo locale={locale} /></div>
+      <aside className={`appSidebar${drawerOpen ? " open" : ""}`} id="app-sidebar">
+        <div className="sidebarBrand">
+          <Logo locale={locale} />
+          <button type="button" className="drawerClose" onClick={() => setDrawerOpen(false)} aria-label={locale === "ar" ? "إغلاق القائمة" : "Close menu"}>
+            <X size={18} />
+          </button>
+        </div>
         <div className="workspaceLabel">{portalLabel}</div>
-        <nav className="sideNav">
+        <nav className="sideNav" onClick={() => setDrawerOpen(false)}>
           {navItems.map(({ key, Icon, href, label }) => (
             <Link href={href} key={key} className={isActivePath(pathname, href) ? "active" : undefined} aria-current={isActivePath(pathname, href) ? "page" : undefined}>
               <Icon size={18} /><span>{label}</span>
@@ -80,19 +92,14 @@ export function DashboardShell({
           </form>
         </div>
       </aside>
+      {drawerOpen ? <button type="button" className="drawerBackdrop" aria-label={locale === "ar" ? "إغلاق القائمة" : "Close menu"} onClick={() => setDrawerOpen(false)} /> : null}
       <div className="appMain">
         <PrelaunchBanner locale={locale} />
         <header className="appTopbar">
-          <details className="mobileNav">
-            <summary aria-label={locale === "ar" ? "القائمة" : "Menu"}><Menu /></summary>
-            <nav>
-              {navItems.map(({ key, Icon, href, label }) => (
-                <Link href={href} key={key} className={isActivePath(pathname, href) ? "active" : undefined} aria-current={isActivePath(pathname, href) ? "page" : undefined}>
-                  <Icon size={17} />{label}
-                </Link>
-              ))}
-            </nav>
-          </details>
+          <button type="button" className="mobileNavTrigger" aria-expanded={drawerOpen} aria-controls="app-sidebar" onClick={() => setDrawerOpen(true)}>
+            <Menu />
+            <span className="srOnly">{locale === "ar" ? "القائمة" : "Menu"}</span>
+          </button>
           <div>
             <span className="topbarKicker">{admin ? dict.admin.title : dict.dashboard.greeting}</span>
             <strong>{userName}</strong>
@@ -102,7 +109,7 @@ export function DashboardShell({
               <Bell size={19} />
               {unread ? <i className="notificationCount">{unread}</i> : null}
             </Link>
-            <div className="avatar">{userName.slice(0, 2).toUpperCase()}</div>
+            <div className="avatar" title={userName}>{userName.slice(0, 2).toUpperCase()}</div>
           </div>
         </header>
         <main className="appContent">{children}</main>
