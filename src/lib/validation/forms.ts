@@ -16,7 +16,7 @@ export const orderRequestSchema = z.object({
   fiatCurrency: z.enum(["USD", "AED", "IQD"]),
   network: z.enum(["TRC20", "ERC20"]),
   amount: z.coerce.number().positive().max(1_000_000),
-  walletAddress: z.string().trim().min(20).max(128),
+  walletAddress: z.string().trim().transform((value) => value.replace(/\s+/g, "")).pipe(z.string().min(20).max(128)),
   transactionPurpose: z.string().trim().min(5).max(500),
   paymentMethodId: z.string().uuid(),
   customerNote: z.string().trim().max(1000).optional().default(""),

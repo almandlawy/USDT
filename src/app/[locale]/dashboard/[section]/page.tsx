@@ -15,7 +15,7 @@ const validSections=["profile","kyc","buy","sell","p2p","proofs","orders","suppo
 
 export default async function ClientSectionPage({params,searchParams}:{params:Promise<{locale:string;section:string}>;searchParams:Promise<Record<string,string|undefined>>}){
   const {locale:raw,section}=await params;if(!isLocale(raw)||!validSections.includes(section))notFound();const locale=raw;const ar=locale==="ar";const query=await searchParams;const user=await requireUser(locale);const supabase=await createClient();
-  const feedback=query.error?<div className="formAlert"><CircleAlert/>{ar?"تعذر تنفيذ العملية. تحقق من البيانات أو الصلاحيات.":"The action could not be completed. Check data or permissions."}</div>:query.created||query.uploaded||query.submitted||query.saved?<div className="formSuccess"><ShieldCheck/>{ar?"تم حفظ العملية بنجاح.":"The action was saved successfully."}</div>:null;
+  const feedback=query.error?<div className="formAlert"><CircleAlert/>{sectionErrorMessage(query.error,ar)}</div>:query.created||query.uploaded||query.submitted||query.saved?<div className="formSuccess"><ShieldCheck/>{ar?"تم حفظ العملية بنجاح.":"The action was saved successfully."}</div>:null;
 
   if(section==="buy"||section==="sell"){
     const [{data:rules},{data:methods}]=await Promise.all([supabase.from("pricing_settings").select("fiat_currency,network,reference_rate,flat_fee,percentage_fee,min_amount,max_amount,quote_ttl_seconds").eq("order_type",section).eq("active",true),supabase.from("payment_methods").select("id,code,name_ar,name_en,min_amount,max_amount").eq("active",true).order("sort_order")]);
@@ -64,3 +64,27 @@ export default async function ClientSectionPage({params,searchParams}:{params:Pr
 
 function PageHead({title,subtitle}:{title:string;subtitle:string}){return <div className="pageHeading"><div><span>GULF GATE / CLIENT</span><h1>{title}</h1><p>{subtitle}</p></div></div>}
 function TimelineItem({label,date,done}:{label:string;date?:string|null;done:boolean}){return <div className={done?"done":""}><i/><span><b>{label}</b><small>{date?new Date(date).toLocaleString():"—"}</small></span></div>}
+function sectionErrorMessage(code:string,ar:boolean){
+  switch(code){
+    case "invalid_wallet":
+      return ar
+        ? "عنوان المحفظة غير صالح. لـ TRC20 لازم يبدأ بـ T ويكون 34 حرفاً بدون الممنوعة 0 O I l. مثال: T9yD14Nj9j7xAB4dbGeiX9h8unkzUcsnQP"
+        : "Invalid wallet address. TRC20 must start with T and be 34 characters without 0 O I l. Example: T9yD14Nj9j7xAB4dbGeiX9h8unkzUcsnQP";
+    case "invalid_payment_method":
+      return ar ? "اختر طريقة دفع صحيحة من القائمة." : "Choose a valid payment method from the list.";
+    case "invalid_amount":
+      return ar ? "المبلغ غير صالح. أدخل رقماً موجباً ضمن الحد المسموح." : "Invalid amount. Enter a positive number within the allowed limit.";
+    case "invalid_purpose":
+      return ar ? "غرض المعاملة قصير جداً. اكتب 5 أحرف على الأقل." : "Transaction purpose is too short. Enter at least 5 characters.";
+    case "amount_out_of_range":
+      return ar ? "المبلغ خارج الحد المسموح لطريقة الدفع أو التسعير." : "Amount is outside the allowed payment or pricing limit.";
+    case "request_unavailable":
+      return ar ? "الطلب غير متاح حالياً. تحقق من التسعير وطريقة الدفع وميزة الطلبات التجريبية." : "Request unavailable. Check pricing, payment method, and demo_requests flag.";
+    case "kyc_level_limit":
+      return ar ? "تجاوزت حد مستوى KYC الحالي." : "This exceeds your current KYC level limit.";
+    case "create_failed":
+      return ar ? "تعذر حفظ الطلب في قاعدة البيانات." : "Could not save the request in the database.";
+    default:
+      return ar ? "تعذر تنفيذ العملية. تحقق من البيانات أو الصلاحيات." : "The action could not be completed. Check data or permissions.";
+  }
+}

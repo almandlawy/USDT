@@ -30,10 +30,25 @@ export async function createOrderAction(formData: FormData) {
   const section = String(formData.get("orderType") || "buy");
   const { supabase, user } = await authenticatedClient(locale, section);
   const parsed = orderRequestSchema.safeParse({
-    orderType: formData.get("orderType"), fiatCurrency: formData.get("fiatCurrency"), network: formData.get("network"),
-    amount: formData.get("amount"), walletAddress: formData.get("walletAddress"), transactionPurpose: formData.get("transactionPurpose"), paymentMethodId: formData.get("paymentMethodId"), customerNote: formData.get("customerNote"),
+    orderType: formData.get("orderType"),
+    fiatCurrency: formData.get("fiatCurrency"),
+    network: formData.get("network"),
+    amount: formData.get("amount"),
+    walletAddress: String(formData.get("walletAddress") || "").replace(/\s+/g, ""),
+    transactionPurpose: formData.get("transactionPurpose"),
+    paymentMethodId: formData.get("paymentMethodId"),
+    customerNote: formData.get("customerNote"),
   });
-  if (!parsed.success) redirect(`/${locale}/dashboard/${section}?error=invalid_form`);
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path[0] || "");
+    const code =
+      field === "walletAddress" ? "invalid_wallet"
+      : field === "paymentMethodId" ? "invalid_payment_method"
+      : field === "amount" ? "invalid_amount"
+      : field === "transactionPurpose" ? "invalid_purpose"
+      : "invalid_form";
+    redirect(`/${locale}/dashboard/${section}?error=${code}`);
+  }
   const [{ data: kyc }, { data: pricing }, { data: paymentMethod }, { data: demoFlag }, {data:profile}, {data:levelRules}, {data:todayOrders}] = await Promise.all([
     supabase.from("kyc_cases").select("status").eq("user_id", user.id).maybeSingle(),
     supabase.from("pricing_settings").select("reference_rate,flat_fee,percentage_fee,min_amount,max_amount,quote_ttl_seconds,indicative_only").eq("order_type",parsed.data.orderType).eq("fiat_currency",parsed.data.fiatCurrency).eq("network",parsed.data.network).eq("active",true).maybeSingle(),
