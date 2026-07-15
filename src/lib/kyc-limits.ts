@@ -1,0 +1,2 @@
+export type KycLimit={level:number;currency:string;perOrder:number;daily:number};
+export function checkKycLimit(amount:number,currency:string,level:number,usedToday:number,limits:KycLimit[]){const rule=limits.find(x=>x.level===level&&x.currency===currency);if(!rule)return{allowed:false,reason:"missing_rule" as const};if(amount>rule.perOrder)return{allowed:false,reason:"per_order" as const,limit:rule.perOrder};if(usedToday+amount>rule.daily)return{allowed:false,reason:"daily" as const,limit:rule.daily};return{allowed:true,remaining:rule.daily-usedToday-amount};}

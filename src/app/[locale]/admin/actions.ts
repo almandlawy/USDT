@@ -11,6 +11,25 @@ import { assertSameOrigin } from "@/lib/security/request";
 
 function configured(locale: Locale, section: string) { if (!isSupabaseConfigured()) redirect(`/${locale}/admin/${section}?error=configuration`); }
 
+export async function assignOpsItemAction(formData: FormData) {
+  const locale = (formData.get("locale") === "en" ? "en" : "ar") as Locale;
+  configured(locale, "ops"); await assertSameOrigin();
+  await requireStaff(locale, ["super_admin", "operations", "compliance", "finance", "reviewer"]);
+  const kind = String(formData.get("kind") || "");
+  const id = String(formData.get("id") || "");
+  const assignee = String(formData.get("assignee") || "");
+  const note = String(formData.get("note") || "").trim().slice(0, 2000);
+  if (!["kyc", "order", "proof", "dispute"].includes(kind) || !/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(assignee)) {
+    redirect(`/${locale}/admin/ops?error=invalid_assignment`);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("assign_ops_item", { _kind: kind, _id: id, _assignee: assignee, _note: note || null });
+  if (error) redirect(`/${locale}/admin/ops?error=assignment_failed`);
+  revalidatePath(`/${locale}/admin/ops`); redirect(`/${locale}/admin/ops?saved=true`);
+}
+
+export async function createReviewBatchAction(formData:FormData){const locale=(formData.get("locale")==="en"?"en":"ar")as Locale;configured(locale,"matching");await assertSameOrigin();const staff=await requireStaff(locale,["super_admin","operations","reviewer"]);const side=String(formData.get("side")||"");const ids=formData.getAll("orderIds").map(String).filter(x=>/^[0-9a-f-]{36}$/i.test(x));if(!["buy","sell"].includes(side)||!ids.length)redirect(`/${locale}/admin/matching?error=invalid_batch`);const s=await createClient();const{data:batch,error}=await s.from("review_batches").insert({name:String(formData.get("name")||`Batch ${new Date().toISOString()}`).slice(0,120),side,created_by:staff.id,status:"open"}).select("id").single();if(error||!batch)redirect(`/${locale}/admin/matching?error=batch_failed`);const{error:itemError}=await s.from("review_batch_items").insert(ids.map(order_id=>({batch_id:batch.id,order_id,added_by:staff.id})));if(itemError)redirect(`/${locale}/admin/matching?error=items_failed`);revalidatePath(`/${locale}/admin/matching`);redirect(`/${locale}/admin/matching?created=true`)}
+
 export async function setTradingAction(formData: FormData) {
   const locale = (formData.get("locale") === "en" ? "en" : "ar") as Locale;
   configured(locale, "settings"); await assertSameOrigin(); await requireStaff(locale, ["super_admin"]);

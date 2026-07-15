@@ -4,6 +4,9 @@ import { describe, expect, it } from "vitest";
 
 const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150001_initial_schema.sql"), "utf8");
 const completion = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150002_complete_platform.sql"), "utf8");
+const controls = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150003_rbac_and_risk_controls.sql"), "utf8");
+const ops = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150004_ops_queue.sql"), "utf8");
+const workflows = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150005_workflows_levels_chat_batches.sql"), "utf8");
 
 describe("database launch invariants", () => {
   it("seeds live trading off and protects activation", () => {
@@ -36,4 +39,20 @@ describe("database launch invariants", () => {
     expect(completion).toContain("LEGAL_APPROVAL_REFERENCE_REQUIRED");
     expect(completion).toContain("if _enabled");
   });
+
+  it("protects dedicated merchant, fee, limit and risk tables with RLS", () => {
+    for(const table of ["p2p_merchants","fee_rules","limit_rules","risk_flags"]){
+      expect(controls).toContain(`create table public.${table}`);
+      expect(controls).toContain(`alter table public.${table} enable row level security`);
+      expect(controls).toContain(`audit_${table}`);
+    }
+    expect(controls).not.toContain("service_role");
+  });
+});
+
+describe("operations workflow invariants",()=>{
+  it("protects assignments with AAL2 and auditing",()=>{expect(ops).toContain("MFA_REQUIRED");expect(ops).toContain("assign_ops_item");expect(ops).toContain("audit_logs")});
+  it("enforces KYC caps in the database",()=>{expect(workflows).toContain("orders_level_limit");expect(workflows).toContain("KYC_LEVEL_LIMIT_EXCEEDED")});
+  it("enables RLS for chat and batches",()=>{expect(workflows).toContain("alter table public.order_messages enable row level security");expect(workflows).toContain("alter table public.review_batches enable row level security")});
+  it("does not implement settlement or release",()=>{expect(workflows).not.toMatch(/settlement_tx_hash\s*=/);expect(workflows).not.toMatch(/released_at\s*=/)});
 });

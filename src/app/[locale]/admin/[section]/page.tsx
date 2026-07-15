@@ -37,9 +37,11 @@ async function loadSection(section:Section) {
     case "p2p":table="p2p_orders";columns="id,reference_number,status,buyer_id,seller_id,fiat_currency,amount_fiat,manual_release_required,created_at";break;
     case "proofs":table="payment_proofs";columns="id,order_id,user_id,status,sender_name,amount,transfer_reference,mismatch_flag,created_at";break;
     case "payment-methods":table="payment_methods";columns="code,name_en,account_holder,account_number_masked,phone,supported_currencies,min_amount,max_amount,active,sort_order";break;
-    case "rates":case "fees":case "limits":table="pricing_settings";columns="id,order_type,fiat_currency,network,reference_rate,spread_bps,flat_fee,percentage_fee,min_amount,max_amount,quote_ttl_seconds,active";break;
+    case "rates":table="pricing_settings";columns="id,order_type,fiat_currency,network,reference_rate,spread_bps,quote_ttl_seconds,active";break;
+    case "fees":table="fee_rules";columns="id,order_type,fiat_currency,network,flat_fee,percentage_fee,active,effective_from,effective_to";break;
+    case "limits":table="limit_rules";columns="id,account_type,kyc_status,order_type,fiat_currency,min_amount,max_amount,daily_limit,monthly_limit,active";break;
     case "wallets":table="wallet_addresses";columns="id,label,network,address,purpose,active,approved_at";break;
-    case "compliance":table="compliance_alerts";columns="id,user_id,order_id,severity,status,code,summary,created_at";break;
+    case "compliance":table="risk_flags";columns="id,user_id,order_id,p2p_order_id,severity,status,code,summary,assigned_to,created_at";break;
     case "disputes":table="disputes";columns="id,p2p_order_id,opened_by,status,reason,assigned_to,created_at";break;
     case "support":table="support_tickets";columns="id,reference_number,user_id,subject,category,priority,status,created_at";break;
     case "notifications":table="notifications";columns="id,user_id,type,title_ar,title_en,read_at,created_at";break;

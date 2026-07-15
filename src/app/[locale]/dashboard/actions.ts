@@ -8,6 +8,7 @@ import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import { orderRequestSchema, proofMetadataSchema } from "@/lib/validation/forms";
 import { assertSameOrigin, requestFingerprint } from "@/lib/security/request";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { checkKycLimit } from "@/lib/kyc-limits";
 
 function requireConfigured(locale: string, section: string) {
   if (!isSupabaseConfigured()) redirect(`/${locale}/dashboard/${section}?error=configuration`);
@@ -33,20 +34,38 @@ export async function createOrderAction(formData: FormData) {
     amount: formData.get("amount"), walletAddress: formData.get("walletAddress"), transactionPurpose: formData.get("transactionPurpose"), paymentMethodId: formData.get("paymentMethodId"), customerNote: formData.get("customerNote"),
   });
   if (!parsed.success) redirect(`/${locale}/dashboard/${section}?error=invalid_form`);
-  const [{ data: kyc }, { data: pricing }, { data: paymentMethod }, { data: demoFlag }] = await Promise.all([
+  const [{ data: kyc }, { data: pricing }, { data: paymentMethod }, { data: demoFlag }, {data:profile}, {data:levelRules}, {data:todayOrders}] = await Promise.all([
     supabase.from("kyc_cases").select("status").eq("user_id", user.id).maybeSingle(),
     supabase.from("pricing_settings").select("reference_rate,flat_fee,percentage_fee,min_amount,max_amount,quote_ttl_seconds,indicative_only").eq("order_type",parsed.data.orderType).eq("fiat_currency",parsed.data.fiatCurrency).eq("network",parsed.data.network).eq("active",true).maybeSingle(),
     supabase.from("payment_methods").select("id,min_amount,max_amount,active").eq("id",parsed.data.paymentMethodId).eq("active",true).maybeSingle(),
     supabase.from("feature_flags").select("enabled").eq("key","demo_requests").maybeSingle(),
+    supabase.from("profiles").select("kyc_level").eq("id",user.id).single(),
+    supabase.from("kyc_level_limits").select("level,fiat_currency,per_order_limit,daily_limit"),
+    supabase.from("orders").select("amount_fiat").eq("user_id",user.id).eq("fiat_currency",parsed.data.fiatCurrency).gte("created_at",new Date(new Date().setHours(0,0,0,0)).toISOString()).not("status","in",'(cancelled,rejected)'),
   ]);
   if (!pricing?.reference_rate || !paymentMethod || demoFlag?.enabled !== true) redirect(`/${locale}/dashboard/${section}?error=request_unavailable`);
   const amount = parsed.data.amount; const minimum = Math.max(Number(pricing.min_amount||0),Number(paymentMethod.min_amount||0)); const maxima=[pricing.max_amount,paymentMethod.max_amount].filter(Boolean).map(Number); const maximum=maxima.length?Math.min(...maxima):null;
   if(amount<minimum||(maximum!==null&&amount>maximum)) redirect(`/${locale}/dashboard/${section}?error=amount_out_of_range`);
+  const levelCheck=checkKycLimit(amount,parsed.data.fiatCurrency,Number(profile?.kyc_level||0),(todayOrders||[]).reduce((sum,row)=>sum+Number(row.amount_fiat),0),(levelRules||[]).map(r=>({level:Number(r.level),currency:r.fiat_currency,perOrder:Number(r.per_order_limit),daily:Number(r.daily_limit)})));
+  if(!levelCheck.allowed)redirect(`/${locale}/dashboard/${section}?error=kyc_level_limit&reason=${levelCheck.reason}`);
   const rate=Number(pricing.reference_rate); const fee=Number(pricing.flat_fee||0)+(amount*Number(pricing.percentage_fee||0)/100); const total=parsed.data.orderType==="buy"?amount+fee:Math.max(0,amount-fee); const status=kyc?.status==="approved"?"awaiting_payment":"awaiting_kyc"; const now=new Date(); const quoteExpires=new Date(now.getTime()+Number(pricing.quote_ttl_seconds||600)*1000);
   const { data: order, error } = await supabase.from("orders").insert({ user_id:user.id, order_type:parsed.data.orderType, status, fiat_currency:parsed.data.fiatCurrency, network:parsed.data.network, amount_fiat:amount, amount_usdt:amount/rate, quote_rate:rate, fee_amount:fee, total_amount:total, quote_created_at:now.toISOString(), quote_expires_at:quoteExpires.toISOString(), payment_method_id:parsed.data.paymentMethodId, wallet_address:parsed.data.walletAddress, transaction_purpose:parsed.data.transactionPurpose, customer_note:parsed.data.customerNote, is_demo:true }).select("id").single();
   if (error || !order) redirect(`/${locale}/dashboard/${section}?error=create_failed`);
   revalidatePath(`/${locale}/dashboard`);
   redirect(`/${locale}/dashboard/orders/${order.id}?created=true`);
+}
+
+export async function acceptDemoQuoteAction(formData: FormData) {
+  const locale=String(formData.get("locale")||"ar");const {supabase}=await authenticatedClient(locale,"orders");const orderId=String(formData.get("orderId")||"");
+  if(!/^[0-9a-f-]{36}$/i.test(orderId))redirect(`/${locale}/dashboard/orders?error=invalid_order`);
+  const {error}=await supabase.rpc("accept_demo_quote",{_order_id:orderId});
+  if(error)redirect(`/${locale}/dashboard/orders/${orderId}?error=quote_unavailable`);revalidatePath(`/${locale}/dashboard/orders/${orderId}`);redirect(`/${locale}/dashboard/orders/${orderId}?accepted=true`);
+}
+
+export async function sendOrderMessageAction(formData:FormData){
+  const locale=String(formData.get("locale")||"ar");const {supabase,user}=await authenticatedClient(locale,"orders");const orderId=String(formData.get("orderId")||"");const message=String(formData.get("message")||"").trim().slice(0,3000);
+  if(!/^[0-9a-f-]{36}$/i.test(orderId)||message.length<1)redirect(`/${locale}/dashboard/orders/${orderId}?error=invalid_message`);
+  const {error}=await supabase.from("order_messages").insert({order_id:orderId,author_id:user.id,message});if(error)redirect(`/${locale}/dashboard/orders/${orderId}?error=message_failed`);revalidatePath(`/${locale}/dashboard/orders/${orderId}`);
 }
 
 function validateUploadMetadata(mimeType: string, size: number) {

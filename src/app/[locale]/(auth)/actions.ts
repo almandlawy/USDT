@@ -47,7 +47,7 @@ export async function registerAction(formData: FormData) {
   if (!parsed.success) authError(locale, "register", "invalid_form");
   const { identifier, password, displayName } = parsed.data;
   const supabase = await createClient();
-  const options = { data: { display_name: displayName, preferred_locale: locale, terms_accepted: true, terms_version: "2026-07-15" } };
+  const options = { emailRedirectTo:`${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/${locale}/dashboard`, data: { display_name: displayName, preferred_locale: locale, terms_accepted: true, terms_version: "2026-07-15" } };
   const input = identifier.includes("@") ? { email: identifier, password, options } : { phone: identifier, password, options };
   const { error } = await supabase.auth.signUp(input);
   if (error) authError(locale, "register", "registration_failed");
@@ -75,7 +75,7 @@ export async function resetPasswordAction(formData: FormData) {
   const email = String(formData.get("email") || "");
   if (!email.includes("@")) authError(locale, "reset-password", "invalid_email");
   const supabase = await createClient();
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/reset-password?mode=update` });
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/${locale}/reset-password%3Fmode%3Dupdate` });
   redirect(`/${locale}/reset-password?sent=true`);
 }
 

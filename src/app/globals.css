@@ -373,8 +373,23 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
 .serviceLock span { display: grid; gap: 4px; }
 .serviceLock b { font: 10px ui-monospace, monospace; }
 .serviceLock small { color: var(--muted); font-size: 9px; }
+.opsFilters { display: grid; grid-template-columns: auto minmax(180px,1.5fr) repeat(4,minmax(120px,1fr)) auto; gap: 10px; align-items: center; }
+.opsFilters input,.opsFilters select,.inlineOpsForm input,.inlineOpsForm select { min-height: 40px; padding: 0 10px; color: var(--text); background: var(--navy-3); border: 1px solid var(--line); border-radius: 8px; }
+.opsLayout { display: grid; grid-template-columns: minmax(0,2fr) minmax(280px,.8fr); gap: 18px; align-items: start; }
+.opsQueue { display: grid; gap: 12px; }
+.opsItem { padding: 0; overflow: hidden; }
+.opsItem summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; padding: 18px; }
+.opsItem summary span { display: grid; gap: 6px; }
+.opsItem summary small,.activityFeed small { color: var(--muted); }
+.opsItemBody { display: grid; gap: 12px; padding: 0 18px 18px; border-top: 1px solid var(--line); }
+.inlineOpsForm { display: grid; grid-template-columns: minmax(150px,.8fr) minmax(180px,1.5fr) auto; gap: 10px; padding-top: 14px; }
+.activityFeed > div:not(.panelHeading) { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.activityFeed > div > i { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+.activityFeed span { display: grid; gap: 3px; }
 
 @media (max-width: 1050px) {
+  .opsFilters { grid-template-columns: repeat(3,1fr); }
+  .opsLayout { grid-template-columns: 1fr; }
   .heroGrid { grid-template-columns: 1fr 1fr; gap: 35px; }
   .featureGrid, .gateGrid { grid-template-columns: repeat(2,1fr); }
   .appFrame, [dir="rtl"] .appFrame { grid-template-columns: 210px 1fr; }
@@ -385,6 +400,8 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
 }
 
 @media (max-width: 780px) {
+  .opsFilters,.inlineOpsForm { grid-template-columns: 1fr; }
+  .opsItem summary { align-items: flex-start; flex-direction: column; }
   .shell { width: min(100% - 24px, 620px); }
   .prelaunchBanner { min-height: 42px; font-size: 10px; }
   .prelaunchBanner strong { display: none; }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, LayoutDashboard, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, History, LifeBuoy, Shield, LogOut, Users, CreditCard, BadgeDollarSign, TriangleAlert, Headphones, UserCog, ScrollText, Settings, Menu, Wallet, Scale, Flag, Gavel, SlidersHorizontal } from "lucide-react";
+import { Bell, LayoutDashboard, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, History, LifeBuoy, Shield, LogOut, Users, CreditCard, BadgeDollarSign, TriangleAlert, Headphones, UserCog, ScrollText, Settings, Menu, Wallet, Scale, Flag, Gavel, SlidersHorizontal, ListTodo } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { PrelaunchBanner } from "@/components/ui/prelaunch-banner";
 import { signOutAction } from "@/app/[locale]/(auth)/actions";
@@ -8,9 +8,9 @@ import type { Locale } from "@/lib/constants";
 
 const clientIcons = [LayoutDashboard, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, History, LifeBuoy, Bell, Shield];
 const clientKeys = ["overview", "profile", "kyc", "buy", "sell", "p2p", "proofs", "orders", "support", "notifications", "security"] as const;
-const adminIcons = [LayoutDashboard,Users,BadgeCheck,ArrowDownToLine,ArrowUpFromLine,Handshake,FileCheck2,CreditCard,BadgeDollarSign,Scale,SlidersHorizontal,Wallet,TriangleAlert,Gavel,Headphones,Bell,UserCog,Shield,ScrollText,FileCheck2,Settings,Flag];
-const adminKeys = ["dashboard","customers","kyc","buyOrders","sellOrders","p2p","proofs","paymentMethods","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","flags"] as const;
-const adminSlugs = ["","customers","kyc","buy-orders","sell-orders","p2p","proofs","payment-methods","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","feature-flags"];
+const adminIcons = [LayoutDashboard,ListTodo,Users,BadgeCheck,ArrowDownToLine,ArrowUpFromLine,Handshake,FileCheck2,CreditCard,BadgeDollarSign,Scale,SlidersHorizontal,Wallet,TriangleAlert,Gavel,Headphones,Bell,UserCog,Shield,ScrollText,FileCheck2,Settings,Flag];
+const adminKeys = ["dashboard","ops","customers","kyc","buyOrders","sellOrders","p2p","proofs","paymentMethods","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","flags"] as const;
+const adminSlugs = ["","ops","customers","kyc","buy-orders","sell-orders","p2p","proofs","payment-methods","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","feature-flags"];
 
 export function DashboardShell({ locale, dict, admin = false, userName, children }: { locale: Locale; dict: Dictionary; admin?: boolean; userName: string; children: React.ReactNode }) {
   const other = locale === "ar" ? "en" : "ar";
