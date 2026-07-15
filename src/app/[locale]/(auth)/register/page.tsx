@@ -16,8 +16,12 @@ function registerErrorMessage(code: string | undefined, ar: boolean) {
         : "Incomplete details or weak password. Use 12+ characters with upper, lower, number and symbol, and accept the terms.";
     case "registration_failed":
       return ar
-        ? "تعذر إنشاء الحساب من Supabase. تحقق من تفعيل Email Auth وقائمة Redirect URLs، أو أن البريد غير مستخدم مسبقاً."
-        : "Supabase could not create the account. Check Email Auth, Redirect URLs, or whether the email is already registered.";
+        ? "تعذر إنشاء الحساب من Supabase. تحقق من تفعيل Email Auth، أو أن البريد غير مستخدم مسبقاً."
+        : "Supabase could not create the account. Check Email Auth, or whether the email is already registered.";
+    case "email_confirmation_required":
+      return ar
+        ? "الحساب أُنشئ، لكن Supabase ما زال يطلب تأكيد البريد. في Supabase: Authentication → Providers → Email → أوقف Confirm email ثم احفظ، وبعدها سجّل دخول مباشرة."
+        : "Account created, but Supabase still requires email confirmation. In Supabase: Authentication → Providers → Email → turn off Confirm email, save, then sign in.";
     case "rate_limited":
       return ar ? "محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة." : "Too many attempts. Wait a moment and try again.";
     case "security_check_failed":
@@ -45,7 +49,7 @@ export default async function RegisterPage({
       <div className="authHeading">
         <span>CREATE SECURE ACCOUNT</span>
         <h2>{ar ? "إنشاء حساب" : "Create account"}</h2>
-        <p>{ar ? "سجّل بالبريد واضغط رابط التأكيد فقط — بدون رمز." : "Register by email and select the confirmation link — no code required."}</p>
+        <p>{ar ? "أدخل البريد وكلمة المرور وادخل مباشرة — بدون تأكيد إيميل." : "Enter your email and password and go straight in — no email confirmation."}</p>
       </div>
       {error && <div className="formAlert">{registerErrorMessage(error, ar)}</div>}
       <form action={registerAction} className="stackForm">

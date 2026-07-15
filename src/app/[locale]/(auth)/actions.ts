@@ -59,12 +59,25 @@ export async function registerAction(formData: FormData) {
   if (!parsed.success) authError(locale, "register", "invalid_form");
   const { identifier, password, displayName } = parsed.data;
   const supabase = await createClient();
-  const origin = getSiteOrigin();
-  const options = { emailRedirectTo:`${origin}/auth/callback?next=/${locale}/dashboard`, data: { display_name: displayName, preferred_locale: locale, terms_accepted: true, terms_version: "2026-07-15" } };
-  const input = identifier.includes("@") ? { email: identifier, password, options } : { phone: identifier, password, options };
-  const { error } = await supabase.auth.signUp(input);
+  const options = {
+    data: {
+      display_name: displayName,
+      preferred_locale: locale,
+      terms_accepted: true,
+      terms_version: "2026-07-15",
+    },
+  };
+  const { data, error } = await supabase.auth.signUp({ email: identifier, password, options });
   if (error) authError(locale, "register", "registration_failed");
-  redirect(`/${locale}/verify?identifier=${encodeURIComponent(identifier)}`);
+
+  // Prefer immediate session (Confirm email disabled in Supabase).
+  if (data.session) redirect(`/${locale}/dashboard`);
+
+  const signedIn = await supabase.auth.signInWithPassword({ email: identifier, password });
+  if (!signedIn.error && signedIn.data.session) redirect(`/${locale}/dashboard`);
+
+  // Account was created but Supabase still requires email confirmation.
+  authError(locale, "register", "email_confirmation_required");
 }
 
 export async function verifyOtpAction(formData: FormData) {
