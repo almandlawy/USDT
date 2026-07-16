@@ -1,13 +1,20 @@
 import "server-only";
 import { hmacSha256 } from "@/lib/security/hmac";
+import { isVercelProduction } from "@/lib/env";
 
-function resolveSecret(): string {
+const DEV_ONLY_SECRET = "local-dev-only-security-hash-secret!!";
+
+/**
+ * Resolve HMAC secret. Vercel Production must set SECURITY_HASH_SECRET (>=32).
+ * Never falls back to deployment ID, hostname, or a constant in production.
+ */
+export function resolveSecret(): string {
   const secret = process.env.SECURITY_HASH_SECRET?.trim();
   if (secret && secret.length >= 32) return secret;
-  if (process.env.NODE_ENV === "production") {
-    return `unconfigured:${process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || "gulf-gate"}`;
+  if (isVercelProduction()) {
+    throw new Error("SECURITY_HASH_SECRET must be set to a value of at least 32 characters in production");
   }
-  return "local-dev-only-security-hash-secret!!";
+  return DEV_ONLY_SECRET;
 }
 
 /** HMAC-SHA256 for security telemetry. Never log or return the raw input. */

@@ -75,7 +75,33 @@ export default async function AdminSectionPage({params,searchParams}:{params:Pro
     {(query.saved||query.updated)&&<div className="formSuccess"><ShieldCheck/>{ar?"تم الحفظ وسُجل التغيير.":"Saved and audit logged."}</div>}
     {ratesExtras}
     <section className="panel"><div className="panelHeading"><div><span>{ar?"سجلات مضبوطة":"Controlled records"}</span><h2>{titles[section][ar?0:1]}</h2></div><StatusBadge tone="neutral">{data.rows.length}</StatusBadge></div>{rows.length?<DataTable columns={keys} rows={rows}/>:<div className="emptyState"><ShieldCheck/><h3>{ar?"لا توجد سجلات":"No records"}</h3><p>{ar?"ستظهر البيانات هنا بعد إنشائها.":"Records will appear here when created."}</p></div>}</section>
-    {section==="kyc"&&<ReviewForm locale={locale} kind="kyc"/>}{section==="proofs"&&<ReviewForm locale={locale} kind="proofs"/>}{["buy-orders","sell-orders"].includes(section)&&<ReviewForm locale={locale} kind="orders"/>}{section==="payment-methods"&&<PaymentMethodForm locale={locale}/>} {section==="rates"&&<PricingForm locale={locale}/>} {section==="wallets"&&<WalletForm locale={locale}/>} {section==="roles"&&<RoleForm locale={locale}/>} {section==="feature-flags"&&<FeatureFlags rows={data.rows} locale={locale}/>} {section==="settings"&&<ActivationForm locale={locale}/>}</>;
+    {section==="kyc"&&<ReviewForm locale={locale} kind="kyc"/>}{section==="proofs"&&<ReviewForm locale={locale} kind="proofs"/>}{["buy-orders","sell-orders"].includes(section)&&<ReviewForm locale={locale} kind="orders"/>}{section==="payment-methods"&&<PaymentMethodForm locale={locale}/>} {section==="rates"&&<PricingForm locale={locale}/>} {section==="wallets"&&<WalletForm locale={locale}/>} {section==="roles"&&<RoleForm locale={locale}/>} {section==="feature-flags"&&<FeatureFlags rows={data.rows} locale={locale}/>} {section==="settings"&&<><TrustReadinessPanel locale={locale}/><ActivationForm locale={locale}/></>}</>;
+}
+
+function TrustReadinessPanel({locale}:{locale:"ar"|"en"}){
+  const ar=locale==="ar";
+  const checks=[
+    ["Legal name",Boolean(process.env.NEXT_PUBLIC_LEGAL_NAME?.trim())],
+    ["Company name",Boolean(process.env.NEXT_PUBLIC_COMPANY_NAME?.trim())],
+    ["Support email",Boolean(process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim())],
+    ["Privacy email",Boolean(process.env.NEXT_PUBLIC_PRIVACY_EMAIL?.trim())],
+    ["WhatsApp",Boolean(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim())],
+    ["Address",Boolean(process.env.NEXT_PUBLIC_COMPANY_ADDRESS?.trim())],
+    ["Working hours",Boolean(process.env.NEXT_PUBLIC_WORKING_HOURS?.trim())],
+    ["Trade licence (optional)",Boolean(process.env.NEXT_PUBLIC_TRADE_LICENSE_NUMBER?.trim())],
+    ["Legal approval reference",Boolean(process.env.LEGAL_APPROVAL_REFERENCE?.trim())],
+    ["Turnstile",Boolean(process.env.TURNSTILE_SECRET_KEY&&process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)],
+    ["Security hash secret",Boolean(process.env.SECURITY_HASH_SECRET&&process.env.SECURITY_HASH_SECRET.length>=32)],
+    ["KYC intake enabled",process.env.KYC_INTAKE_ENABLED==="true"],
+    ["Proof intake enabled",process.env.PROOF_INTAKE_ENABLED==="true"],
+  ] as const;
+  const missing=checks.filter(([,ok])=>!ok);
+  return <section className="panel">
+    <div className="panelHeading"><div><span>PRE-LAUNCH READINESS</span><h2>{ar?"معلومات الثقة والتجهيز":"Trust and readiness fields"}</h2></div></div>
+    <p className="panelLead">{ar?"LEGAL REVIEW REQUIRED BEFORE PUBLIC LAUNCH — لا تُختلق بيانات قانونية. KYC وإثباتات الدفع تبقى مقفلة حتى اكتمال الاسم القانوني وبريد الخصوصية.":"LEGAL REVIEW REQUIRED BEFORE PUBLIC LAUNCH — do not invent legal data. KYC and payment-proof intake stay off until legal name and privacy email are set."}</p>
+    <ul className="checkList">{checks.map(([label,ok])=><li key={label} className={ok?"done":""}>{label}{ok?"":ar?" — ناقص":" — missing"}</li>)}</ul>
+    {missing.length?<div className="dangerNotice"><CircleAlert/><p>{ar?`حقول ناقصة: ${missing.length}. استقبال المستندات يبقى معطلاً.`:`Missing fields: ${missing.length}. Document intake remains disabled.`}</p></div>:null}
+  </section>;
 }
 
 async function loadRatesExtras(locale:"ar"|"en"){
@@ -130,7 +156,28 @@ function adminErrorMessage(code:string|undefined,ar:boolean){
   }
 }
 
-function ReviewForm({locale,kind}:{locale:"ar"|"en";kind:"kyc"|"proofs"|"orders"}){const ar=locale==="ar";const action=kind==="kyc"?reviewKycAction:kind==="proofs"?reviewProofAction:updateOrderStatusAction;const statuses=kind==="orders"?["awaiting_kyc","awaiting_payment","proof_uploaded","under_review","payment_confirmed","compliance_hold","approved","cancelled","rejected","refund_required"]:["under_review","approved","rejected","resubmission_required"];return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>MANUAL REVIEW / AUDITED</span><h2>{ar?"إجراء مراجعة":"Review action"}</h2></div><ShieldCheck/></div><form action={action} className="formGrid"><input type="hidden" name="locale" value={locale}/><label><span>UUID</span><input name="id" required/></label><label><span>{ar?"الحالة الجديدة":"New status"}</span><select name="status">{statuses.map(s=><option key={s}>{s}</option>)}</select></label><label className="fullField"><span>{ar?"ملاحظة المراجع":"Reviewer note"}</span><textarea name="note" rows={3}/></label>{kind==="proofs"&&<label className="checkLine"><input type="checkbox" name="flagMismatch"/>{ar?"إشارة عدم تطابق":"Flag mismatch"}</label>}<button className="primaryButton" type="submit"><Save/>{ar?"حفظ القرار":"Save decision"}</button></form></section>}
+function ReviewForm({locale,kind}:{locale:"ar"|"en";kind:"kyc"|"proofs"|"orders"}){
+  const ar=locale==="ar";
+  const action=kind==="kyc"?reviewKycAction:kind==="proofs"?reviewProofAction:updateOrderStatusAction;
+  const statuses=kind==="orders"
+    ?["awaiting_kyc","awaiting_payment","proof_uploaded","under_review","payment_confirmed","compliance_hold","approved","cancelled","rejected","refund_required"]
+    :["under_review","approved","rejected","resubmission_required"];
+  return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>MANUAL REVIEW / AUDITED</span><h2>{ar?"إجراء مراجعة":"Review action"}</h2></div><ShieldCheck/></div>
+    <form action={action} className="formGrid">
+      <input type="hidden" name="locale" value={locale}/>
+      <label><span>UUID</span><input name="id" required/></label>
+      <label><span>{ar?"الحالة الجديدة":"New status"}</span><select name="status">{statuses.map(s=><option key={s}>{s}</option>)}</select></label>
+      {kind==="orders"
+        ? <label className="fullField"><span>{ar?"ملاحظة المراجع":"Reviewer note"}</span><textarea name="note" rows={3}/></label>
+        : <>
+          <label className="fullField"><span>{ar?"السبب الظاهر للعميل (إلزامي عند الرفض/إعادة التقديم)":"Customer-visible reason (required for reject/resubmit)"}</span><textarea name="customerReason" rows={3}/></label>
+          <label className="fullField"><span>{ar?"ملاحظة داخلية للموظفين فقط":"Internal staff note only"}</span><textarea name="internalNote" rows={3}/></label>
+        </>}
+      {kind==="proofs"&&<label className="checkLine"><input type="checkbox" name="flagMismatch"/>{ar?"إشارة عدم تطابق":"Flag mismatch"}</label>}
+      <button className="primaryButton" type="submit"><Save/>{ar?"حفظ القرار":"Save decision"}</button>
+    </form>
+  </section>;
+}
 
 function PaymentMethodForm({locale}:{locale:"ar"|"en"}){const ar=locale==="ar";return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>PAYMENT METHOD</span><h2>{ar?"إضافة أو تعديل طريقة":"Add or update method"}</h2></div></div><form action={savePaymentMethodAction} className="formGrid"><input type="hidden" name="locale" value={locale}/><label><span>Type</span><select name="code">{["bank_transfer","fib","superqi","zain_cash","cash_representative","wallet_transfer"].map(v=><option key={v}>{v}</option>)}</select></label><label><span>{ar?"صاحب الحساب":"Account holder"}</span><input name="accountHolder"/></label><label><span>{ar?"الاسم العربي":"Arabic name"}</span><input name="nameAr" required/></label><label><span>{ar?"الاسم الإنجليزي":"English name"}</span><input name="nameEn" required/></label><label><span>{ar?"الحساب المخفي":"Masked account"}</span><input name="accountNumberMasked"/></label><label><span>{ar?"الهاتف":"Phone"}</span><input name="phone"/></label><label><span>{ar?"المدينة":"City"}</span><input name="city"/></label><label><span>{ar?"المدن المدعومة":"Supported cities"}</span><input name="cities"/></label><label><span>Min</span><input name="minAmount" type="number"/></label><label><span>Max</span><input name="maxAmount" type="number"/></label><label><span>{ar?"الترتيب":"Sort order"}</span><input name="sortOrder" type="number" defaultValue="100"/></label><label className="checkLine"><input type="checkbox" name="active"/>{ar?"فعالة":"Active"}</label><fieldset className="fullField checkGroup"><legend>{ar?"العملات":"Currencies"}</legend>{["USD","AED","IQD"].map(v=><label key={v}><input type="checkbox" name="currencies" value={v}/>{v}</label>)}</fieldset><label className="fullField"><span>{ar?"تعليمات عربية":"Arabic instructions"}</span><textarea name="instructionsAr" rows={3}/></label><label className="fullField"><span>{ar?"تعليمات إنجليزية":"English instructions"}</span><textarea name="instructionsEn" rows={3}/></label><button className="primaryButton" type="submit"><Save/>{ar?"حفظ":"Save"}</button></form></section>}
 

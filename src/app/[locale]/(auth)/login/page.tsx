@@ -27,6 +27,11 @@ export default async function LoginPage({
         <span>{ar ? "الوصول إلى الحساب" : "Account access"}</span>
         <h2>{ar ? "تسجيل الدخول" : "Sign in"}</h2>
         <p>{ar ? "استخدم بريدك الإلكتروني وكلمة المرور." : "Use your email address and password."}</p>
+        <ul className="authTrustList">
+          <li>{ar ? "جلسات دخول آمنة" : "Secure sessions"}</li>
+          <li>{ar ? "حماية متقدمة للحساب" : "Strong account protection"}</li>
+          <li>{ar ? "مصادقة ثنائية اختيارية للعملاء" : "Optional customer 2FA"}</li>
+        </ul>
       </div>
       {query.password_updated ? <div className="formSuccess" role="status">{ar ? "تم تحديث كلمة المرور. سجّل الدخول الآن." : "Password updated. Sign in now."}</div> : null}
       {query.error ? <div className="formAlert" role="alert">{authErrorMessage(query.error, locale)}</div> : null}

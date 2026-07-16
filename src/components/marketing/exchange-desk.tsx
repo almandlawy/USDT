@@ -10,9 +10,8 @@ type DeskRates = {
   usdtAed: number;
   usdtIqd: number;
   stale: boolean;
+  status?: "live" | "live_with_derived_fx" | "fallback";
 };
-
-const FEE_BPS = 35; // indicative desk spread preview only
 
 export function ExchangeDesk({
   locale,
@@ -31,26 +30,36 @@ export function ExchangeDesk({
   const unit = useMemo(() => {
     if (fiat === "USD") return rates.usdtUsd || 1;
     if (fiat === "AED") return rates.usdtAed || rates.usdtUsd * 3.6725;
-    return rates.usdtIqd > 0 ? rates.usdtIqd : 1310;
+    return rates.usdtIqd > 0 ? rates.usdtIqd : 0;
   }, [fiat, rates]);
 
   const parsed = Number(amount.replace(/,/g, "")) || 0;
-  const feeRate = FEE_BPS / 10000;
   const quote = useMemo(() => {
+    if (!unit || unit <= 0) return { quantity: 0, amount: 0 };
     if (mode === "buy") {
-      const gross = parsed / unit;
-      const fee = gross * feeRate;
-      return { quantity: Math.max(gross - fee, 0), amount: parsed, fee: fee * unit };
+      return { quantity: parsed / unit, amount: parsed };
     }
-    const amountOut = parsed * unit;
-    const fee = amountOut * feeRate;
-    return { quantity: parsed, amount: Math.max(amountOut - fee, 0), fee };
-  }, [feeRate, mode, parsed, unit]);
+    return { quantity: parsed, amount: parsed * unit };
+  }, [mode, parsed, unit]);
 
   const formatFiat = (value: number) =>
     value.toLocaleString(ar ? "ar-IQ" : "en-US", { maximumFractionDigits: fiat === "IQD" ? 0 : 2 });
   const formatUsdt = (value: number) =>
     value.toLocaleString("en-US", { maximumFractionDigits: value < 10 ? 4 : 2 });
+
+  const status = rates.status || (rates.stale ? "fallback" : "live");
+  const statusLabel =
+    status === "fallback"
+      ? ar
+        ? "مزود الأسعار غير متاح"
+        : "Market provider unavailable"
+      : status === "live_with_derived_fx"
+        ? ar
+          ? "حي مع صرف محسوب"
+          : "Live with derived FX"
+        : ar
+          ? "سعر استرشادي محدّث"
+          : "Updated indicative rate";
 
   return (
     <div className="exchangeDesk" aria-label={ar ? "حاسبة أسعار استرشادية" : "Indicative exchange desk"}>
@@ -72,9 +81,7 @@ export function ExchangeDesk({
       <div className="exchangeField">
         <div>
           <small>{mode === "buy" ? (ar ? "أنت ترسل" : "You send") : ar ? "أنت تبيع" : "You sell"}</small>
-          <strong>
-            {mode === "buy" ? fiat : "USDT"}
-          </strong>
+          <strong>{mode === "buy" ? fiat : "USDT"}</strong>
         </div>
         {mode === "buy" ? (
           <select value={fiat} onChange={(event) => setFiat(event.target.value as typeof fiat)} aria-label="Fiat">
@@ -102,7 +109,7 @@ export function ExchangeDesk({
 
       <div className="exchangeField resultField">
         <div>
-          <small>{mode === "buy" ? (ar ? "ستحصل تقريباً على" : "You may receive") : ar ? "ستحصل تقريباً على" : "You may receive"}</small>
+          <small>{ar ? "ستحصل تقريباً على" : "You may receive"}</small>
           <strong>{mode === "buy" ? "USDT" : fiat}</strong>
         </div>
         {mode === "buy" ? (
@@ -118,7 +125,13 @@ export function ExchangeDesk({
           </select>
         )}
         <output>
-          {mode === "buy" ? formatUsdt(quote.quantity) : formatFiat(quote.amount)}
+          {!unit || unit <= 0
+            ? ar
+              ? "غير متاح"
+              : "Unavailable"
+            : mode === "buy"
+              ? formatUsdt(quote.quantity)
+              : formatFiat(quote.amount)}
         </output>
       </div>
 
@@ -126,18 +139,16 @@ export function ExchangeDesk({
         <div>
           <dt>{ar ? "السعر الاسترشادي" : "Indicative rate"}</dt>
           <dd>
-            1 USDT ≈ {formatFiat(unit)} {fiat}
+            {!unit || unit <= 0 ? (ar ? "غير محدد حالياً" : "Not available") : `1 USDT ≈ ${formatFiat(unit)} ${fiat}`}
           </dd>
         </div>
         <div>
-          <dt>{ar ? "رسوم تقديرية" : "Estimated fee"}</dt>
-          <dd>
-            {formatFiat(quote.fee)} {fiat}
-          </dd>
+          <dt>{ar ? "الرسوم" : "Fees"}</dt>
+          <dd>{ar ? "غير محددة حالياً — مثال معاينة فقط" : "Not set yet — preview example only"}</dd>
         </div>
         <div>
           <dt>{ar ? "الحالة" : "Status"}</dt>
-          <dd>{rates.stale ? (ar ? "بيانات احتياطية" : "Fallback data") : ar ? "محدّث" : "Live feed"}</dd>
+          <dd>{statusLabel}</dd>
         </div>
       </dl>
 
@@ -146,8 +157,8 @@ export function ExchangeDesk({
       </Link>
       <p className="exchangeNote">
         {ar
-          ? "الأسعار للمعاينة فقط. لا يُنفَّذ إيداع أو تحويل أو إطلاق USDT في وضع ما قبل الإطلاق."
-          : "Prices are for preview only. No deposit, transfer or USDT release runs in pre-launch mode."}
+          ? "الأسعار للمعاينة فقط وغير ملزمة. لا يُنفَّذ إيداع أو تحويل أو إطلاق USDT في مرحلة التجهيز."
+          : "Prices are for non-binding preview only. No deposit, transfer or USDT release runs in the preparation phase."}
       </p>
     </div>
   );

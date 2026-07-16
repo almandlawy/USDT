@@ -1,6 +1,7 @@
 # Supabase production checklist
 
-## Apply migrations in order
+## Migration order
+
 1. `202607150001_initial_schema.sql`
 2. `202607150002_complete_platform.sql`
 3. `202607150003_rbac_and_risk_controls.sql`
@@ -11,30 +12,37 @@
 8. `202607150008_staff_rpc_aal2_and_fx_settings.sql`
 9. `202607150009_customer_notifications_kyc_resubmit_fx_audit.sql`
 10. `202607150010_production_readiness_hardening.sql`
+11. `202607150011_kyc_customer_reason_and_data_requests.sql`
 
-Never edit already-applied migrations. Add a new dated file for fixes.
+## Verify 008–011
 
-## Verify after apply
 ```sql
-select to_regclass('public.market_fx_settings');
-select to_regclass('public.market_fx_public');
-select proname from pg_proc where proname in ('require_staff_aal2','update_market_fx','current_staff_role_label','purge_old_login_events');
-select key, value from public.site_settings where key = 'live_trading';
+select key, value from public.site_settings where key in ('live_trading','schema_migration_marker');
+select to_regprocedure('public.require_staff_aal2()') is not null;
+select to_regprocedure('public.current_staff_role_label()') is not null;
+select to_regclass('public.market_fx_settings') is not null;
+select to_regclass('public.market_fx_public') is not null;
+select to_regprocedure('public.update_market_fx(numeric,numeric,text)') is not null;
+select to_regprocedure('public.purge_old_login_events()') is not null;
+select to_regclass('public.data_requests') is not null;
+select column_name from information_schema.columns
+ where table_schema='public' and table_name='kyc_cases'
+   and column_name in ('customer_reason','internal_review_notes');
 ```
 
-Expect `live_trading` = false.
+Expected: `live_trading` is `false`, marker is at least `202607150011`.
 
 ## Storage
-Buckets `kyc-documents`, `payment-proofs`, `p2p-evidence` must be **private**.
+
+Confirm buckets `kyc-documents`, `payment-proofs`, `p2p-evidence` exist and are **private**.
 
 ## Auth
-See `docs/AUTH_EMAIL_SETUP.md`.
 
-## MFA
-Staff admin routes require AAL2 in app + privileged RPCs.
+- Site URL = production origin
+- Redirect URLs include `/auth/callback` and locale paths
+- Confirm email OFF for current direct-login UX (operator decision)
+- MFA available for staff
 
-## Roll-forward on failure
-1. Keep Production on previous deployment.
-2. Fix with a new migration (do not rewrite history).
-3. Re-run verification queries.
-4. Promote only after CI green.
+## Roll-forward
+
+Never edit applied migrations. Add a new numbered migration if a fix is required.

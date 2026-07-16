@@ -39,4 +39,22 @@ export default async function OpsQueuePage({params,searchParams}:{params:Promise
     <div className="opsLayout"><section className="opsQueue">{items.length?items.map(item=><details className="panel opsItem" key={`${item.kind}-${item.id}`}><summary><span><StatusBadge tone={item.kind==="dispute"?"danger":"info"}>{item.kind}</StatusBadge><b>{item.reference}</b><small>{item.customer} · {new Date(item.createdAt).toLocaleString(ar?"ar-IQ":"en-GB")}</small></span><span><StatusBadge tone={item.status.includes("reject")?"danger":"warning"}>{item.status}</StatusBadge><small>{item.currency||"—"} · {item.network||"—"}</small></span></summary><div className="opsItemBody">{item.files?.length?<div className="documentList">{item.files.map(f=><Link target="_blank" rel="noreferrer" href={`/api/files/${f.bucket}/${f.path}`} key={f.path}>{f.name}</Link>)}</div>:null}<form action={assignOpsItemAction} className="inlineOpsForm"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="kind" value={item.kind}/><input type="hidden" name="id" value={item.id}/><select name="assignee" required defaultValue={item.assignedTo||""}><option value="" disabled>{ar?"عيّن موظفاً":"Assign staff"}</option>{staffOptions.map(s=><option value={s.id} key={`${item.id}-${s.id}-${s.role}`}>{s.name} · {s.role}</option>)}</select><input name="note" placeholder={ar?"ملاحظة داخلية":"Internal note"}/><button className="secondaryButton">{ar?"تعيين وحفظ":"Assign & save"}</button></form>{item.kind==="kyc"&&<QuickReview locale={locale} id={item.id} kind="kyc"/>}{item.kind==="proof"&&<QuickReview locale={locale} id={item.id} kind="proof"/>}{item.kind==="order"&&<QuickReview locale={locale} id={item.id} kind="order"/>}</div></details>):<div className="panel emptyState">{ar?"لا توجد عناصر مطابقة.":"No matching queue items."}</div>}</section><aside className="panel activityFeed"><div className="panelHeading"><div><span>AUDIT STREAM</span><h2>{ar?"آخر النشاطات":"Recent activity"}</h2></div><Activity/></div>{(activity||[]).map(a=><div key={a.id}><i/><span><b>{a.action}</b><small>{a.entity_type} · {String(a.entity_id||"").slice(0,8)} · {new Date(a.created_at).toLocaleString(ar?"ar-IQ":"en-GB")}</small></span></div>)}</aside></div></>;
 }
 
-function QuickReview({locale,id,kind}:{locale:"ar"|"en";id:string;kind:"kyc"|"proof"|"order"}){const action=kind==="kyc"?reviewKycAction:kind==="proof"?reviewProofAction:updateOrderStatusAction;const statuses=kind==="kyc"?["under_review","approved","rejected","resubmission_required"]:kind==="proof"?["under_review","approved","rejected","resubmission_required"]:["awaiting_kyc","awaiting_payment","proof_uploaded","under_review","payment_confirmed","compliance_hold","approved","cancelled","rejected","refund_required"];return <form action={action} className="inlineOpsForm"><input type="hidden" name="locale" value={locale}/><input type="hidden" name="id" value={id}/><select name="status">{statuses.map(s=><option key={s}>{s}</option>)}</select><input name="note" placeholder={locale==="ar"?"سبب القرار":"Decision note"}/><button className="primaryButton">{locale==="ar"?"تحديث الحالة":"Update status"}</button></form>}
+function QuickReview({locale,id,kind}:{locale:"ar"|"en";id:string;kind:"kyc"|"proof"|"order"}){
+  const action=kind==="kyc"?reviewKycAction:kind==="proof"?reviewProofAction:updateOrderStatusAction;
+  const statuses=kind==="kyc"||kind==="proof"
+    ?["under_review","approved","rejected","resubmission_required"]
+    :["awaiting_kyc","awaiting_payment","proof_uploaded","under_review","payment_confirmed","compliance_hold","approved","cancelled","rejected","refund_required"];
+  const ar=locale==="ar";
+  return <form action={action} className="inlineOpsForm">
+    <input type="hidden" name="locale" value={locale}/>
+    <input type="hidden" name="id" value={id}/>
+    <select name="status">{statuses.map(s=><option key={s}>{s}</option>)}</select>
+    {kind==="order"
+      ? <input name="note" placeholder={ar?"سبب القرار":"Decision note"}/>
+      : <>
+        <input name="customerReason" placeholder={ar?"سبب للعميل (إلزامي عند الرفض)":"Customer reason (required on reject)"}/>
+        <input name="internalNote" placeholder={ar?"ملاحظة داخلية":"Internal note"}/>
+      </>}
+    <button className="primaryButton">{ar?"تحديث الحالة":"Update status"}</button>
+  </form>;
+}

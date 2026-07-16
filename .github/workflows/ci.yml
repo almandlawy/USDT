@@ -28,6 +28,7 @@ jobs:
           test -f supabase/migrations/202607150008_staff_rpc_aal2_and_fx_settings.sql
           test -f supabase/migrations/202607150009_customer_notifications_kyc_resubmit_fx_audit.sql
           test -f supabase/migrations/202607150010_production_readiness_hardening.sql
+          test -f supabase/migrations/202607150011_kyc_customer_reason_and_data_requests.sql
           if grep -RInE "LIVE_TRADING[[:space:]]*=[[:space:]]*true" supabase/migrations; then
             echo "Live trading enablement found in migrations" && exit 1
           fi
@@ -38,6 +39,8 @@ jobs:
           NEXT_PUBLIC_LIVE_TRADING: "false"
           LIVE_TRADING: "false"
           TURNSTILE_BYPASS_FOR_TESTS: "true"
+          SECURITY_HASH_SECRET: "ci-only-security-hash-secret-32chars!!"
+          INTERNAL_HEALTH_TOKEN: "ci-only-internal-health-token-32chars!!"
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Start app for E2E
@@ -46,7 +49,6 @@ jobs:
           echo $! > /tmp/next.pid
           for i in $(seq 1 40); do
             code=$(curl -s -o /tmp/health.json -w "%{http_code}" http://127.0.0.1:3000/api/health || true)
-            # 200 ok or 503 degraded both mean the app process is serving /api/health
             if [ "$code" = "200" ] || [ "$code" = "503" ]; then
               echo "App ready (HTTP $code)"
               cat /tmp/health.json || true
@@ -61,6 +63,8 @@ jobs:
           NEXT_PUBLIC_LIVE_TRADING: "false"
           LIVE_TRADING: "false"
           TURNSTILE_BYPASS_FOR_TESTS: "true"
+          SECURITY_HASH_SECRET: "ci-only-security-hash-secret-32chars!!"
+          INTERNAL_HEALTH_TOKEN: "ci-only-internal-health-token-32chars!!"
           NODE_ENV: production
       - name: E2E Desktop
         run: npm run test:e2e:desktop
@@ -91,7 +95,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -100,7 +104,57 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Production smoke after deploy
-        run: npm run test:e2e:desktop
+      - name: Wait for Vercel deployment SHA match
+        id: wait_deploy
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          INTERNAL_HEALTH_TOKEN: ${{ secrets.INTERNAL_HEALTH_TOKEN }}
+          PRODUCTION_URL: https://gulf-gate-platform.vercel.app
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          echo "expected=$EXPECTED_SHA" | tee artifacts/expected-sha.txt
+          if [ -z "${INTERNAL_HEALTH_TOKEN:-}" ]; then
+            echo "INTERNAL_HEALTH_TOKEN secret is required for exact-SHA production verification" | tee artifacts/smoke-report.txt
+            exit 1
+          fi
+          matched=""
+          for i in $(seq 1 60); do
+            code=$(curl -sS -o /tmp/ihealth.json -w "%{http_code}" \
+              -H "Authorization: Bearer $INTERNAL_HEALTH_TOKEN" \
+              "$PRODUCTION_URL/api/internal/health" || true)
+            echo "attempt=$i http=$code" | tee -a artifacts/smoke-report.txt
+            if [ "$code" = "200" ]; then
+              cat /tmp/ihealth.json | tee artifacts/internal-health.json >/dev/null
+              actual=$(python3 -c 'import json;print(json.load(open("/tmp/ihealth.json")).get("version",{}).get("commitSha") or "")')
+              locked=$(python3 -c 'import json;print(json.load(open("/tmp/ihealth.json")).get("liveTradingLocked"))')
+              envname=$(python3 -c 'import json;print(json.load(open("/tmp/ihealth.json")).get("version",{}).get("env") or "")')
+              echo "actual=$actual locked=$locked env=$envname" | tee -a artifacts/smoke-report.txt
+              if [ "$actual" = "$EXPECTED_SHA" ] && [ "$locked" = "True" -o "$locked" = "true" ]; then
+                if [ "$envname" = "production" ] || [ -n "$envname" ]; then
+                  matched=1
+                  break
+                fi
+              fi
+            fi
+            sleep 10
+          done
+          if [ -z "$matched" ]; then
+            echo "Production alias did not serve expected commit $EXPECTED_SHA within timeout" | tee -a artifacts/smoke-report.txt
+            exit 1
+          fi
+          echo "sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+      - name: Production signature smoke
+        run: npm run test:e2e:desktop -- e2e/production-signature.spec.ts e2e/smoke.spec.ts
         env:
           PLAYWRIGHT_BASE_URL: https://gulf-gate-platform.vercel.app
+      - name: Upload production smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-${{ github.sha }}
+          path: |
+            artifacts/
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore

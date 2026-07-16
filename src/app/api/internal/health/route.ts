@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { getUsdToAedRate, getUsdToIqdRate } from "@/lib/market-quotes";
+import { getMarketSnapshot } from "@/lib/market-data";
 import { isSupabaseConfigured, publicEnv } from "@/lib/env";
+import { isSecurityHashConfigured } from "@/lib/security/hash";
+import { isTurnstileConfigured } from "@/lib/security/turnstile";
+import { trustContactReadiness } from "@/lib/feature-flags";
 import { createClient } from "@/lib/supabase/server";
 import { timingSafeEqual } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
+const EXPECTED_MIGRATION = "202607150011";
+
 function tokenOk(provided: string | null, expected: string | undefined) {
-  if (!provided || !expected || expected.length < 24) return false;
+  if (!provided || !expected || expected.length < 32) return false;
   try {
     const a = Buffer.from(provided);
     const b = Buffer.from(expected);
@@ -21,6 +26,7 @@ function tokenOk(provided: string | null, expected: string | undefined) {
 
 /**
  * Internal health — requires INTERNAL_HEALTH_TOKEN bearer OR staff AAL2 session.
+ * Used by CI to verify deployed commit SHA matches GITHUB_SHA.
  */
 export async function GET() {
   const headerStore = await headers();
@@ -44,25 +50,43 @@ export async function GET() {
   }
 
   if (!tokenAllowed && !staffAllowed) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+    return NextResponse.json(
+      { error: "unauthorized" },
+      { status: 401, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } },
+    );
   }
 
   let database: "ok" | "error" | "unconfigured" = "unconfigured";
   let dbLiveTrading: boolean | null = null;
+  let migrationMarker: string | null = null;
+  let siteSettingsReadable = false;
+
   if (isSupabaseConfigured()) {
     try {
       const url = publicEnv.NEXT_PUBLIC_SUPABASE_URL!;
       const key = publicEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-      const response = await fetch(`${url}/rest/v1/site_settings?key=eq.live_trading&select=value`, {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-        cache: "no-store",
-        signal: AbortSignal.timeout(3000),
-      });
-      database = response.ok ? "ok" : "error";
-      if (response.ok) {
-        const rows = (await response.json()) as Array<{ value?: unknown }>;
-        const raw = rows[0]?.value;
-        dbLiveTrading = raw === true || raw === "true";
+      const response = await fetch(
+        `${url}/rest/v1/site_settings?or=(key.eq.live_trading,key.eq.schema_migration_marker)&select=key,value`,
+        {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+          cache: "no-store",
+          signal: AbortSignal.timeout(3000),
+        },
+      );
+      if (!response.ok) {
+        database = "error";
+      } else {
+        siteSettingsReadable = true;
+        database = "ok";
+        const rows = (await response.json()) as Array<{ key?: string; value?: unknown }>;
+        for (const row of rows) {
+          if (row.key === "live_trading") {
+            dbLiveTrading = row.value === true || row.value === "true" || row.value === 1;
+          }
+          if (row.key === "schema_migration_marker") {
+            migrationMarker = typeof row.value === "string" ? row.value.replace(/"/g, "") : String(row.value ?? "");
+          }
+        }
       }
     } catch {
       database = "error";
@@ -70,35 +94,62 @@ export async function GET() {
   }
 
   let market: "ok" | "degraded" = "degraded";
+  let marketStatus: string | null = null;
   try {
-    const response = await fetch("https://api.coingecko.com/api/v3/ping", {
-      cache: "no-store",
-      signal: AbortSignal.timeout(2500),
-    });
-    market = response.ok ? "ok" : "degraded";
+    const snapshot = await getMarketSnapshot();
+    marketStatus = snapshot.status;
+    market = snapshot.status === "fallback" ? "degraded" : "ok";
   } catch {
     market = "degraded";
   }
 
+  const emailConfigured =
+    process.env.AUTH_EMAIL_PROVIDER_CONFIGURED === "true"
+      ? "configured"
+      : process.env.AUTH_EMAIL_PROVIDER_CONFIGURED === "false"
+        ? "not_configured"
+        : "unknown";
+
+  const envLocked =
+    process.env.LIVE_TRADING !== "true" && process.env.NEXT_PUBLIC_LIVE_TRADING !== "true";
+  const liveTradingLocked = envLocked && dbLiveTrading !== true;
+  const migrationOk = !migrationMarker || migrationMarker >= "202607150010";
+  const readiness = trustContactReadiness();
+
+  const degraded =
+    database === "unconfigured" ||
+    database === "error" ||
+    !liveTradingLocked ||
+    !migrationOk ||
+    market === "degraded" ||
+    !isTurnstileConfigured() ||
+    !isSecurityHashConfigured();
+
   return NextResponse.json(
     {
-      status: database === "error" || dbLiveTrading === true ? "degraded" : "ok",
+      status: degraded ? "degraded" : "ok",
       service: "gulf-gate-platform",
-      liveTradingLocked: process.env.LIVE_TRADING !== "true" && process.env.NEXT_PUBLIC_LIVE_TRADING !== "true" && dbLiveTrading !== true,
+      liveTradingLocked,
       checks: {
         database,
+        siteSettingsReadable,
         dbLiveTrading,
         marketProvider: market,
-        storage: isSupabaseConfigured() ? "configured" : "unconfigured",
-        emailConfigured: Boolean(process.env.SMTP_HOST || process.env.RESEND_API_KEY),
-        captchaConfigured: Boolean(process.env.TURNSTILE_SECRET_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
-        securityHashConfigured: Boolean(process.env.SECURITY_HASH_SECRET && process.env.SECURITY_HASH_SECRET.length >= 32),
+        marketStatus,
+        storage: isSupabaseConfigured() ? "unknown_use_supabase_dashboard" : "unconfigured",
+        emailConfigured,
+        captchaConfigured: isTurnstileConfigured(),
+        securityHashConfigured: isSecurityHashConfigured(),
+        migrationMarker,
+        expectedMigration: EXPECTED_MIGRATION,
+        trustContact: readiness,
       },
-      fxFallback: { usdToIqd: getUsdToIqdRate(), usdToAed: getUsdToAedRate() },
       version: {
         commitSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.COMMIT_SHA || null,
         deploymentId: process.env.VERCEL_DEPLOYMENT_ID || null,
         env: process.env.VERCEL_ENV || process.env.NODE_ENV || null,
+        buildTime: process.env.BUILD_TIME || null,
+        migrationsVersion: migrationMarker || "unknown",
       },
       checkedAt: new Date().toISOString(),
     },

@@ -12,7 +12,7 @@ export default async function TrustCenter({params}:{params:Promise<{locale:strin
   const {locale}=await params;if(!isLocale(locale))notFound();const ar=locale==="ar",user=await requireUser(locale),s=await createClient();
   const [{data:profile},{data:kyc},{data:limits},{data:acceptances},{data:assurance},{count:openOrders},{count:loginEvents}]=await Promise.all([
     s.from("profiles").select("display_name,phone,country_code,city,account_type,kyc_level,terms_accepted_at,terms_version,login_alerts_enabled").eq("id",user.id).single(),
-    s.from("kyc_cases").select("status,account_type,submitted_at,reviewed_at,review_notes").eq("user_id",user.id).maybeSingle(),
+    s.from("kyc_cases").select("status,account_type,submitted_at,reviewed_at,customer_reason").eq("user_id",user.id).maybeSingle(),
     s.from("kyc_level_limits").select("fiat_currency,per_order_limit,daily_limit,description_ar,description_en").eq("level",0),
     s.from("legal_acceptances").select("document_key,document_version,accepted_at").eq("user_id",user.id),
     s.auth.mfa.getAuthenticatorAssuranceLevel(),
