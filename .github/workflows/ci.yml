@@ -77,7 +77,11 @@ jobs:
         run: npm audit --omit=dev --audit-level=critical
       - name: Secret scan guidance
         run: |
-          if grep -RInE "SUPABASE_SERVICE_ROLE_KEY=ey|BEGIN PRIVATE KEY|sk_live_" --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next .; then
+          matches=$(grep -RInE "SUPABASE_SERVICE_ROLE_KEY=eyJ|BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY|sk_live_[0-9a-zA-Z]{10,}" \
+            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.github \
+            --exclude="*.md" --exclude=".env.example" . || true)
+          if [ -n "$matches" ]; then
+            echo "$matches"
             echo "Possible secrets detected in working tree"
             exit 1
           fi
