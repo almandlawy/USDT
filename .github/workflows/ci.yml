@@ -8,7 +8,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,19 +21,86 @@ jobs:
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
-      - name: Test
+      - name: Unit tests
         run: npm run test
+      - name: Migration consistency
+        run: |
+          test -f supabase/migrations/202607150008_staff_rpc_aal2_and_fx_settings.sql
+          test -f supabase/migrations/202607150009_customer_notifications_kyc_resubmit_fx_audit.sql
+          test -f supabase/migrations/202607150010_production_readiness_hardening.sql
+          if grep -RInE "LIVE_TRADING[[:space:]]*=[[:space:]]*true" supabase/migrations; then
+            echo "Live trading enablement found in migrations" && exit 1
+          fi
       - name: Build
         run: npm run build
         env:
           NEXT_PUBLIC_APP_URL: https://gulf-gate-platform.vercel.app
           NEXT_PUBLIC_LIVE_TRADING: "false"
           LIVE_TRADING: "false"
+          TURNSTILE_BYPASS_FOR_TESTS: "true"
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Production smoke (Playwright)
-        run: npm run test:e2e
+      - name: Start app for E2E
+        run: |
+          npm run start -- --port 3000 &
+          echo $! > /tmp/next.pid
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /tmp/health.json -w "%{http_code}" http://127.0.0.1:3000/api/health || true)
+            # 200 ok or 503 degraded both mean the app process is serving /api/health
+            if [ "$code" = "200" ] || [ "$code" = "503" ]; then
+              echo "App ready (HTTP $code)"
+              cat /tmp/health.json || true
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App failed to start"
+          exit 1
+        env:
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_LIVE_TRADING: "false"
+          LIVE_TRADING: "false"
+          TURNSTILE_BYPASS_FOR_TESTS: "true"
+          NODE_ENV: production
+      - name: E2E Desktop
+        run: npm run test:e2e:desktop
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      - name: E2E Mobile
+        run: npm run test:e2e:mobile
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      - name: Stop app
+        if: always()
+        run: kill $(cat /tmp/next.pid) || true
+      - name: Dependency audit (critical fail)
+        run: npm audit --omit=dev --audit-level=critical
+      - name: Secret scan guidance
+        run: |
+          matches=$(grep -RInE "SUPABASE_SERVICE_ROLE_KEY=eyJ|BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY|sk_live_[0-9a-zA-Z]{10,}" \
+            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.github \
+            --exclude="*.md" --exclude=".env.example" . || true)
+          if [ -n "$matches" ]; then
+            echo "$matches"
+            echo "Possible secrets detected in working tree"
+            exit 1
+          fi
+          echo "No obvious committed secrets found."
+
+  production-smoke:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Production smoke after deploy
+        run: npm run test:e2e:desktop
         env:
           PLAYWRIGHT_BASE_URL: https://gulf-gate-platform.vercel.app
-      - name: Dependency audit (report only)
-        run: npm audit --omit=dev --audit-level=critical || true

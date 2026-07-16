@@ -30,7 +30,7 @@ Last reviewed: 2026-07-15
 Do not apply these until the custom domain is connected and verified:
 
 ```dotenv
-NEXT_PUBLIC_APP_URL=https://gulfgatecargotrading.com
+NEXT_PUBLIC_APP_URL=https://YOUR_APPROVED_CUSTOM_DOMAIN
 ```
 
 Google's DNS verification token is not an application environment variable. It belongs in the domain's DNS as a TXT record and must be reviewed before insertion.

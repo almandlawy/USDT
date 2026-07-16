@@ -6,20 +6,28 @@ const messages = {
     en: "Account service is temporarily unavailable. Please try again later.",
   },
   invalid_form: {
-    ar: "البيانات غير مكتملة أو كلمة المرور ضعيفة. يلزم 12 حرفاً مع حرف كبير وصغير ورقم ورمز، مع الموافقة على الشروط.",
-    en: "Incomplete details or weak password. Use 12+ characters with upper, lower, number and symbol, and accept the terms.",
+    ar: "البيانات غير مكتملة. أكمل الحقول المطلوبة ووافق على السياسات.",
+    en: "Incomplete details. Complete the required fields and accept the policies.",
+  },
+  weak_password: {
+    ar: "كلمة المرور ضعيفة. يلزم 12 حرفاً مع حرف كبير وصغير ورقم ورمز، وتجنب الكلمات الشائعة.",
+    en: "Weak password. Use 12+ characters with upper, lower, number and symbol, and avoid common passwords.",
+  },
+  password_mismatch: {
+    ar: "كلمتا المرور غير متطابقتين.",
+    en: "Passwords do not match.",
   },
   registration_failed: {
-    ar: "تعذر إنشاء الحساب. إن كان لديك حساب مسبقاً فسجّل الدخول، أو جرّب بريداً آخر.",
-    en: "Could not create the account. If you already have an account, sign in, or try another email.",
+    ar: "تعذر إنشاء الحساب. حاول مرة أخرى أو استخدم بريداً آخر.",
+    en: "Could not create the account. Try again or use another email.",
   },
   email_already_registered: {
-    ar: "تعذر إكمال التسجيل بهذا البريد. سجّل الدخول أو استخدم بريداً آخر.",
-    en: "Could not complete registration with this email. Sign in or use another email.",
+    ar: "هذا البريد مسجل مسبقاً. سجّل الدخول أو استعد كلمة المرور.",
+    en: "This email is already registered. Sign in or reset your password.",
   },
   email_confirmation_required: {
-    ar: "أُنشئ الحساب. افتح رابط التأكيد في بريدك ثم سجّل الدخول.",
-    en: "Account created. Open the confirmation link in your email, then sign in.",
+    ar: "أُنشئ الحساب لكن تأكيد البريد ما زال مفعلاً لدى المشغّل. سجّل الدخول بعد التفعيل أو تواصل مع الدعم.",
+    en: "Account created, but email confirmation is still enabled by the operator. Sign in after activation or contact support.",
   },
   invalid_credentials: {
     ar: "بيانات الدخول غير صحيحة.",
@@ -32,6 +40,14 @@ const messages = {
   security_check_failed: {
     ar: "فشل التحقق الأمني للطلب. حدّث الصفحة وأعد المحاولة من نفس الموقع.",
     en: "Security check failed. Refresh and retry from the same site.",
+  },
+  captcha_required: {
+    ar: "أكمل التحقق الأمني ثم أعد المحاولة.",
+    en: "Complete the security check and try again.",
+  },
+  captcha_failed: {
+    ar: "فشل التحقق الأمني. حدّث الصفحة وأعد المحاولة.",
+    en: "Security check failed. Refresh the page and try again.",
   },
   invalid_email: {
     ar: "البريد الإلكتروني غير صالح.",

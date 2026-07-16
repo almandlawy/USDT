@@ -13,13 +13,13 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "smoke",
-      testMatch: /smoke\.spec\.ts/,
+      name: "desktop",
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "mobile-smoke",
-      testMatch: /smoke\.spec\.ts/,
+      name: "mobile",
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices["Pixel 7"] },
     },
   ],

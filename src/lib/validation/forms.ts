@@ -1,15 +1,36 @@
 import { z } from "zod";
+import { evaluatePassword } from "@/lib/security/password";
 
-export const authIdentifierSchema = z.union([z.string().email(), z.string().regex(/^\+[1-9]\d{7,14}$/)]);
-export const passwordSchema = z.string().min(12).max(128).regex(/[a-z]/).regex(/[A-Z]/).regex(/\d/).regex(/[^A-Za-z0-9]/);
+export const emailSchema = z.string().trim().email().max(254);
+export const passwordSchema = z
+  .string()
+  .min(12)
+  .max(128)
+  .regex(/[a-z]/, "lower")
+  .regex(/[A-Z]/, "upper")
+  .regex(/\d/, "digit")
+  .regex(/[^A-Za-z0-9]/, "special")
+  .refine((value) => evaluatePassword(value).ok, "common_or_weak");
 
-export const registerSchema = z.object({
-  identifier: z.string().email(),
-  password: passwordSchema,
-  displayName: z.string().trim().min(2).max(100),
-  locale: z.enum(["ar", "en"]),
-  termsAccepted: z.literal("on"),
-});
+/** @deprecated phone identifiers removed — email only */
+export const authIdentifierSchema = emailSchema;
+
+export const registerSchema = z
+  .object({
+    email: emailSchema,
+    password: passwordSchema,
+    passwordConfirm: z.string(),
+    displayName: z.string().trim().min(2).max(100),
+    accountType: z.enum(["individual", "business"]),
+    locale: z.enum(["ar", "en"]),
+    termsAccepted: z.literal("on"),
+    privacyAccepted: z.literal("on"),
+    riskAccepted: z.literal("on"),
+  })
+  .refine((value) => value.password === value.passwordConfirm, {
+    message: "password_mismatch",
+    path: ["passwordConfirm"],
+  });
 
 export const orderRequestSchema = z.object({
   orderType: z.enum(["buy", "sell", "p2p"]),
