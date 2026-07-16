@@ -131,8 +131,9 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
               rates={{
                 usdtUsd: usdt?.usd && usdt.usd > 0 ? usdt.usd : 1,
                 usdtAed: usdt?.aed && usdt.aed > 0 ? usdt.aed : 3.6725,
-                usdtIqd: usdt?.iqd && usdt.iqd > 0 ? usdt.iqd : 1310,
+                usdtIqd: usdt?.iqd && usdt.iqd > 0 ? usdt.iqd : 0,
                 stale: market.status === "fallback" || market.stale,
+                status: market.status,
               }}
             />
           </div>

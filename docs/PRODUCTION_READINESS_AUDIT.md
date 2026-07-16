@@ -49,3 +49,17 @@ Scope: Pre-launch hardening. `LIVE_TRADING` remains locked. Fixes applied in bra
 
 - Live trading remains disabled in UI, server actions, and PostgreSQL locks.
 - No real USDT send/release paths added.
+
+
+## 2026-07-16 follow-up (deployment alignment)
+
+| Issue | Fix | Test |
+|---|---|---|
+| Production alias could serve older revision | Exact-SHA internal health poll in CI before alias smoke | `production-smoke` workflow |
+| HMAC fallback to deployment ID | Fail closed without `SECURITY_HASH_SECRET` on Vercel Production | `hash.test.ts` |
+| Turnstile skipped when keys missing | Fail closed in Vercel Production | `turnstile.test.ts` |
+| KYC `review_notes` shown to customers | `customer_reason` / `internal_review_notes` + migration 011 | DB invariants + app select |
+| Public fee looked real | Removed hardcoded FEE_BPS; fees “not set” | exchange desk + e2e |
+| KYC/proof intake open pre-legal | `KYC_INTAKE_ENABLED` / `PROOF_INTAKE_ENABLED` default false | server actions + UI gate |
+
+Manual: apply migration 011; set GitHub `INTERNAL_HEALTH_TOKEN`; set Vercel Turnstile + hash secrets.
