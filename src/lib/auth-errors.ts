@@ -49,6 +49,14 @@ const messages = {
     ar: "فشل التحقق الأمني. حدّث الصفحة وأعد المحاولة.",
     en: "Security check failed. Refresh the page and try again.",
   },
+  captcha_misconfigured: {
+    ar: "التسجيل غير متاح مؤقتاً أثناء التجهيز. حاول لاحقاً أو تواصل مع الدعم.",
+    en: "Registration is temporarily unavailable during preparation. Try later or contact support.",
+  },
+  intake_disabled: {
+    ar: "رفع المستندات غير متاح حالياً خلال مرحلة التجهيز.",
+    en: "Document upload is not available during the preparation phase.",
+  },
   invalid_email: {
     ar: "البريد الإلكتروني غير صالح.",
     en: "The email address is invalid.",

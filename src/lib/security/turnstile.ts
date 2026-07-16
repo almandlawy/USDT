@@ -1,23 +1,45 @@
 import "server-only";
+import { isVercelProduction } from "@/lib/env";
 
 export type TurnstileResult =
   | { ok: true }
-  | { ok: false; code: "captcha_required" | "captcha_failed" };
+  | { ok: false; code: "captcha_required" | "captcha_failed" | "captcha_misconfigured" };
+
+export function isTurnstileConfigured(): boolean {
+  return Boolean(process.env.TURNSTILE_SECRET_KEY?.trim() && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+}
 
 /**
- * Verify Cloudflare Turnstile when configured.
- * - TURNSTILE_BYPASS_FOR_TESTS=true works only outside Production.
- * - If keys are not configured yet, verification is skipped (auth still rate-limited).
- * - When keys ARE configured, token is mandatory.
+ * Verify Cloudflare Turnstile.
+ * - Vercel Production: keys required; missing keys => captcha_misconfigured (fail closed).
+ * - Test bypass only when not Vercel Production AND TURNSTILE_BYPASS_FOR_TESTS=true.
  */
-export async function verifyTurnstile(token: FormDataEntryValue | null, remoteIp?: string | null): Promise<TurnstileResult> {
-  if (process.env.TURNSTILE_BYPASS_FOR_TESTS === "true" && process.env.NODE_ENV !== "production") {
-    return { ok: true };
+export async function verifyTurnstile(
+  token: FormDataEntryValue | null,
+  remoteIp?: string | null,
+  options?: { required?: boolean },
+): Promise<TurnstileResult> {
+  const required = options?.required !== false;
+
+  if (process.env.TURNSTILE_BYPASS_FOR_TESTS === "true") {
+    if (isVercelProduction()) {
+      console.error("[turnstile] TURNSTILE_BYPASS_FOR_TESTS ignored in production");
+    } else {
+      return { ok: true };
+    }
   }
 
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
-  if (!secret || !siteKey) return { ok: true };
+  if (!secret || !siteKey) {
+    if (required) {
+      if (isVercelProduction()) {
+        console.error("[turnstile] misconfigured: missing site/secret keys in production");
+      }
+      return { ok: false, code: "captcha_misconfigured" };
+    }
+    return { ok: true };
+  }
 
   const value = String(token || "").trim();
   if (!value) return { ok: false, code: "captcha_required" };
