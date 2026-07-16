@@ -11,6 +11,7 @@ const intelligence = readFileSync(resolve(process.cwd(), "supabase/migrations/20
 const aal2Fx = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150008_staff_rpc_aal2_and_fx_settings.sql"), "utf8");
 const customerNotify = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150009_customer_notifications_kyc_resubmit_fx_audit.sql"), "utf8");
 const readiness = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150010_production_readiness_hardening.sql"), "utf8");
+const kycReason = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150011_kyc_customer_reason_and_data_requests.sql"), "utf8");
 
 describe("database launch invariants", () => {
   it("seeds live trading off and protects activation", () => {
@@ -122,5 +123,23 @@ describe("production readiness migration 010", () => {
     expect(readiness).toContain("notifications_staff_select");
     expect(readiness).toContain("kind in ('support')");
     expect(readiness).toContain("kind in ('kyc','compliance','ops')");
+  });
+});
+
+describe("migration 011 customer reasons and data requests", () => {
+  it("adds customer_reason and internal_review_notes without unlocking trading", () => {
+    expect(kycReason).toContain("customer_reason");
+    expect(kycReason).toContain("internal_review_notes");
+    expect(kycReason).toContain("CUSTOMER_REASON_REQUIRED");
+    expect(kycReason).toContain("data_requests");
+    expect(kycReason).toContain("kyc_cases_customer");
+    expect(kycReason).not.toMatch(/live_trading'\s*,\s*'true'/i);
+    expect(kycReason).toContain("value = 'false'::jsonb");
+  });
+
+  it("notifications use customer_reason only", () => {
+    expect(kycReason).toContain("notify_customer_kyc_decision");
+    expect(kycReason).toContain("new.customer_reason");
+    expect(kycReason).not.toMatch(/new\.internal_review_notes/);
   });
 });

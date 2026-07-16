@@ -67,8 +67,17 @@ export async function reviewKycAction(formData: FormData) {
   const locale = (formData.get("locale") === "en" ? "en" : "ar") as Locale;
   configured(locale, "kyc"); await assertSameOrigin(); await requireStaff(locale, ["super_admin", "compliance", "reviewer"]);
   const id = String(formData.get("id") || ""); const status = String(formData.get("status") || "");
+  const customerReason = String(formData.get("customerReason") || formData.get("note") || "").trim().slice(0, 2000);
+  const internalNote = String(formData.get("internalNote") || "").trim().slice(0, 2000);
   if (!/^[0-9a-f-]{36}$/i.test(id) || !["approved","rejected","resubmission_required","under_review"].includes(status)) redirect(`/${locale}/admin/kyc?error=invalid_review`);
-  const supabase = await createClient(); const { error } = await supabase.rpc("review_kyc",{case_id:id,new_status:status,note:String(formData.get("note")||"").slice(0,2000)});
+  if (["rejected","resubmission_required"].includes(status) && customerReason.length < 4) redirect(`/${locale}/admin/kyc?error=customer_reason_required`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_kyc", {
+    case_id: id,
+    new_status: status,
+    customer_reason: customerReason || null,
+    internal_note: internalNote || null,
+  });
   if (error) redirect(`/${locale}/admin/kyc?error=save_failed`); revalidatePath(`/${locale}/admin/kyc`);
 }
 
@@ -76,8 +85,18 @@ export async function reviewProofAction(formData: FormData) {
   const locale = (formData.get("locale") === "en" ? "en" : "ar") as Locale;
   configured(locale, "proofs"); await assertSameOrigin(); await requireStaff(locale, ["super_admin", "operations", "finance", "reviewer"]);
   const id = String(formData.get("id") || ""); const status = String(formData.get("status") || "");
+  const customerReason = String(formData.get("customerReason") || formData.get("note") || "").trim().slice(0, 2000);
+  const internalNote = String(formData.get("internalNote") || "").trim().slice(0, 2000);
   if (!/^[0-9a-f-]{36}$/i.test(id) || !["approved","rejected","resubmission_required","under_review"].includes(status)) redirect(`/${locale}/admin/proofs?error=invalid_review`);
-  const supabase = await createClient(); const { error } = await supabase.rpc("review_payment_proof",{proof_id:id,new_status:status,note:String(formData.get("note")||"").slice(0,2000),flag_mismatch:formData.get("flagMismatch")==="on"});
+  if (["rejected","resubmission_required"].includes(status) && customerReason.length < 4) redirect(`/${locale}/admin/proofs?error=customer_reason_required`);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_payment_proof", {
+    proof_id: id,
+    new_status: status,
+    customer_reason: customerReason || null,
+    internal_note: internalNote || null,
+    flag_mismatch: formData.get("flagMismatch") === "on",
+  });
   if (error) redirect(`/${locale}/admin/proofs?error=save_failed`); revalidatePath(`/${locale}/admin/proofs`);
 }
 

@@ -13,6 +13,7 @@ import { statusTone } from "@/lib/order-display";
 import { createClient } from "@/lib/supabase/server";
 import { formatOrderDate, systemStatusLabel } from "@/lib/status-labels";
 import {
+  createDataRequestAction,
   createP2pOrderAction,
   createTicketAction,
   markAllNotificationsReadAction,
@@ -39,9 +40,10 @@ export default async function ClientSectionPage({params,searchParams}:{params:Pr
   }
 
   if(section==="kyc"){
-    const [{data:kyc},{data:documents}]=await Promise.all([supabase.from("kyc_cases").select("id,status,account_type,nationality,source_of_funds,transaction_purpose,review_notes,created_at,submitted_at,reviewed_at").eq("user_id",user.id).maybeSingle(),supabase.from("kyc_documents").select("id,kind,status,original_filename,reviewer_note,created_at").eq("user_id",user.id).order("created_at",{ascending:false})]);const resubmit=!kyc||["draft","resubmission_required","rejected"].includes(kyc.status);
-    const showCustomerReason=kyc?.review_notes&&["rejected","resubmission_required"].includes(kyc.status);
-    return <><PageHead title={ar?"التحقق من الهوية":"Identity verification"} subtitle={ar?"ملف فعلي للأفراد والشركات وتخزين خاص.":"Live individual and business verification with private storage."}/>{feedback}<section className="panel"><div className="panelHeading"><div><span>{ar?"ملف الهوية":"Identity case"}{kyc?.id?` / ${kyc.id.slice(0,8)}`:""}</span><h2>{ar?"حالة التحقق":"Verification status"}</h2></div><StatusBadge tone={statusTone(kyc?.status||"not_started")}>{systemStatusLabel(kyc?.status,locale)}</StatusBadge></div><div className="orderTimeline"><TimelineItem label={ar?"إنشاء الملف":"Case created"} date={kyc?.created_at} done={Boolean(kyc)}/><TimelineItem label={ar?"تم الإرسال":"Submitted"} date={kyc?.submitted_at} done={Boolean(kyc?.submitted_at)}/><TimelineItem label={ar?"قرار المراجع":"Review decision"} date={kyc?.reviewed_at} done={Boolean(kyc?.reviewed_at)}/></div>{showCustomerReason?<div className="dangerNotice"><CircleAlert/><p>{kyc?.review_notes}</p></div>:null}<h3 className="subsectionTitle">{ar?"المستندات الخاصة":"Private documents"}</h3>{documents?.length?<div className="documentList">{documents.map(document=><div key={document.id}><span><b>{document.kind}</b><small>{document.original_filename}</small></span><StatusBadge tone={document.status==="accepted"?"success":document.status==="rejected"?"danger":"warning"}>{systemStatusLabel(document.status,locale)}</StatusBadge></div>)}</div>:<div className="emptyState">{ar?"لا توجد مستندات.":"No documents uploaded."}</div>}</section>{resubmit&&<section className="panel kycSubmissionPanel"><div className="panelHeading"><div><span>{ar?"رفع خاص":"Private upload"}</span><h2>{ar?"إرسال أو إعادة تقديم":"Submit or resubmit"}</h2></div></div><KycUploadForm locale={locale}/></section>}</>;
+    const kycIntake=process.env.KYC_INTAKE_ENABLED==="true"&&Boolean(process.env.NEXT_PUBLIC_LEGAL_NAME?.trim()&&process.env.NEXT_PUBLIC_PRIVACY_EMAIL?.trim());
+    const [{data:kyc},{data:documents}]=await Promise.all([supabase.from("kyc_cases").select("id,status,account_type,nationality,source_of_funds,transaction_purpose,customer_reason,created_at,submitted_at,reviewed_at").eq("user_id",user.id).maybeSingle(),supabase.from("kyc_documents").select("id,kind,status,original_filename,created_at").eq("user_id",user.id).order("created_at",{ascending:false})]);const resubmit=!kyc||["draft","resubmission_required","rejected"].includes(kyc.status);
+    const showCustomerReason=kyc?.customer_reason&&["rejected","resubmission_required"].includes(kyc.status);
+    return <><PageHead title={ar?"التحقق من الهوية":"Identity verification"} subtitle={ar?"ملف للأفراد والشركات مع تخزين خاص أثناء مرحلة التجهيز.":"Individual and business verification with private storage during preparation."}/>{feedback}<section className="panel"><div className="panelHeading"><div><span>{ar?"ملف الهوية":"Identity case"}{kyc?.id?` / ${kyc.id.slice(0,8)}`:""}</span><h2>{ar?"حالة التحقق":"Verification status"}</h2></div><StatusBadge tone={statusTone(kyc?.status||"not_started")}>{systemStatusLabel(kyc?.status,locale)}</StatusBadge></div><div className="orderTimeline"><TimelineItem label={ar?"إنشاء الملف":"Case created"} date={kyc?.created_at} done={Boolean(kyc)}/><TimelineItem label={ar?"تم الإرسال":"Submitted"} date={kyc?.submitted_at} done={Boolean(kyc?.submitted_at)}/><TimelineItem label={ar?"قرار المراجع":"Review decision"} date={kyc?.reviewed_at} done={Boolean(kyc?.reviewed_at)}/></div>{showCustomerReason?<div className="dangerNotice"><CircleAlert/><p>{kyc?.customer_reason}</p></div>:null}<h3 className="subsectionTitle">{ar?"المستندات الخاصة":"Private documents"}</h3>{documents?.length?<div className="documentList">{documents.map(document=><div key={document.id}><span><b>{document.kind}</b><small>{document.original_filename}</small></span><StatusBadge tone={document.status==="accepted"?"success":document.status==="rejected"?"danger":"warning"}>{systemStatusLabel(document.status,locale)}</StatusBadge></div>)}</div>:<div className="emptyState">{ar?"لا توجد مستندات.":"No documents uploaded."}</div>}</section>{resubmit?(kycIntake?<section className="panel kycSubmissionPanel"><div className="panelHeading"><div><span>{ar?"رفع خاص":"Private upload"}</span><h2>{ar?"إرسال أو إعادة تقديم":"Submit or resubmit"}</h2></div></div><KycUploadForm locale={locale}/></section>:<section className="panel"><div className="marketNotice"><LockKeyhole/><p>{ar?"رفع المستندات غير متاح حالياً خلال مرحلة التجهيز.":"Document upload is not available during the preparation phase."}</p></div></section>):null}</>;
   }
 
   if(section==="p2p"){
@@ -50,13 +52,15 @@ export default async function ClientSectionPage({params,searchParams}:{params:Pr
   }
 
   if(section==="proofs"){
-    const [{data:proofs},{data:orders}]=await Promise.all([supabase.from("payment_proofs").select("id,order_id,original_filename,transfer_reference,amount,status,mismatch_flag,reviewer_note,created_at").eq("user_id",user.id).order("created_at",{ascending:false}),supabase.from("orders").select("id,reference_number").eq("user_id",user.id).in("status",["awaiting_payment","proof_uploaded","under_review"])]);
-    return <><PageHead title={ar?"إثباتات الدفع التجريبية":"Demo payment proofs"} subtitle={ar?"رفع خاص ومراجعة يدوية وروابط مؤقتة.":"Private upload, manual review and temporary URLs."}/>{feedback}<section className="panel proofPanel">{orders?.length?<ProofUploadForm locale={locale}/>:<div className="emptyState">{ar?"أنشئ طلباً مؤهلاً أولاً ثم ارفع الإثبات من صفحة تفاصيله.":"Create an eligible request first, then upload from its detail page."}</div>}</section><section className="panel"><div className="panelHeading"><div><span>{ar?"مرفوعات خاصة":"Private submissions"}</span><h2>{ar?"سجل الإثباتات":"Proof history"}</h2></div></div>{proofs?.length?<DataTable columns={ar?["الملف","المرجع","المبلغ","الحالة"]:["File","Reference","Amount","Status"]} rows={proofs.map(proof=>[proof.original_filename,proof.transfer_reference,String(proof.amount),systemStatusLabel(proof.status,locale)])}/>:<div className="emptyState">{ar?"لا توجد إثباتات.":"No proofs uploaded."}</div>}</section></>;
+    const proofIntake=process.env.PROOF_INTAKE_ENABLED==="true"&&Boolean(process.env.NEXT_PUBLIC_LEGAL_NAME?.trim()&&process.env.NEXT_PUBLIC_PRIVACY_EMAIL?.trim());
+    const page=Math.max(1,Number(query.page||1)||1);const pageSize=20;
+    const [{data:proofs},{data:orders}]=await Promise.all([supabase.from("payment_proofs").select("id,order_id,original_filename,transfer_reference,amount,status,customer_reason,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).range((page-1)*pageSize,page*pageSize-1),supabase.from("orders").select("id,reference_number").eq("user_id",user.id).in("status",["awaiting_payment","proof_uploaded","under_review"])]);
+    return <><PageHead title={ar?"إثباتات الدفع التجريبية":"Demo payment proofs"} subtitle={ar?"مستند تجريبي فقط — لا ترسل إثبات تحويل حقيقياً.":"Demo document only — do not send a real transfer proof."}/>{feedback}<section className="panel proofPanel">{!proofIntake?<div className="marketNotice"><LockKeyhole/><p>{ar?"رفع المستندات غير متاح حالياً خلال مرحلة التجهيز.":"Document upload is not available during the preparation phase."}</p></div>:orders?.length?<ProofUploadForm locale={locale}/>:<div className="emptyState">{ar?"أنشئ طلباً مؤهلاً أولاً ثم ارفع الإثبات من صفحة تفاصيله.":"Create an eligible request first, then upload from its detail page."}</div>}</section><section className="panel"><div className="panelHeading"><div><span>{ar?"مرفوعات خاصة":"Private submissions"}</span><h2>{ar?"سجل الإثباتات":"Proof history"}</h2></div></div>{proofs?.length?<DataTable columns={ar?["الملف","المرجع","المبلغ","الحالة"]:["File","Reference","Amount","Status"]} rows={proofs.map(proof=>[proof.original_filename,proof.transfer_reference,String(proof.amount),systemStatusLabel(proof.status,locale)])}/>:<div className="emptyState">{ar?"لا توجد إثباتات.":"No proofs uploaded."}</div>}</section></>;
   }
 
   if(section==="orders"){
     const {data:orders,error}=await supabase.from("orders").select("id,reference_number,order_type,amount_fiat,fiat_currency,network,status,created_at").eq("user_id",user.id).order("created_at",{ascending:false});
-    if(error){console.error("[orders] load failed",{userId:user.id,code:error.code});return <><PageHead title={ar?"سجل الطلبات":"Order history"} subtitle={ar?"بيانات فعلية ومراجع وحالات قابلة للتدقيق.":"Live records, references and auditable statuses."}/><section className="panel dashboardErrorPanel"><p>{ar?"تعذر تحميل بيانات الحساب مؤقتاً. حاول مرة أخرى.":"Account data could not be loaded temporarily. Please try again."}</p><Link className="primaryButton" href={`/${locale}/dashboard/orders`}>{ar?"إعادة المحاولة":"Retry"}</Link></section></>;}
+    if(error){console.error("[orders] load failed",{code:error.code});return <><PageHead title={ar?"سجل الطلبات":"Order history"} subtitle={ar?"بيانات فعلية ومراجع وحالات قابلة للتدقيق.":"Live records, references and auditable statuses."}/><section className="panel dashboardErrorPanel"><p>{ar?"تعذر تحميل بيانات الحساب مؤقتاً. حاول مرة أخرى.":"Account data could not be loaded temporarily. Please try again."}</p><Link className="primaryButton" href={`/${locale}/dashboard/orders`}>{ar?"إعادة المحاولة":"Retry"}</Link></section></>;}
     return <><PageHead title={ar?"سجل الطلبات":"Order history"} subtitle={ar?"بيانات فعلية ومراجع وحالات قابلة للتدقيق.":"Live records, references and auditable statuses."}/>{feedback}<section className="panel">{orders?.length?<OrdersActivity locale={locale} orders={orders}/>:<div className="emptyState emptyStateActions"><p>{ar?"لا توجد طلبات بعد. ابدأ بإنشاء طلب شراء أو بيع تجريبي.":"No requests yet. Start by creating a demo buy or sell request."}</p><div className="headingActions"><Link className="primaryButton" href={`/${locale}/dashboard/buy`}>{ar?"إنشاء طلب شراء":"Create buy request"}</Link><Link className="secondaryButton" href={`/${locale}/dashboard/sell`}>{ar?"إنشاء طلب بيع":"Create sell request"}</Link></div></div>}</section></>;
   }
 
@@ -67,11 +71,11 @@ export default async function ClientSectionPage({params,searchParams}:{params:Pr
 
   if(section==="notifications"){
     const {data:notifications,error}=await supabase.from("notifications").select("id,title_ar,title_en,body_ar,body_en,kind,link,read_at,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(100);
-    if(error){console.error("[notifications] load failed",{userId:user.id,code:error.code});return <><PageHead title={ar?"الإشعارات":"Notifications"} subtitle={ar?"تنبيهات الحساب والطلبات والأمان.":"Account, request and security alerts."}/><section className="panel dashboardErrorPanel"><p>{ar?"تعذر تحميل الإشعارات.":"Could not load notifications."}</p><Link className="primaryButton" href={`/${locale}/dashboard/notifications`}>{ar?"إعادة المحاولة":"Retry"}</Link></section></>;}
+    if(error){console.error("[notifications] load failed",{code:error.code});return <><PageHead title={ar?"الإشعارات":"Notifications"} subtitle={ar?"تنبيهات الحساب والطلبات والأمان.":"Account, request and security alerts."}/><section className="panel dashboardErrorPanel"><p>{ar?"تعذر تحميل الإشعارات.":"Could not load notifications."}</p><Link className="primaryButton" href={`/${locale}/dashboard/notifications`}>{ar?"إعادة المحاولة":"Retry"}</Link></section></>;}
     const unread=notifications?.filter((item)=>!item.read_at).length||0;
     return <><PageHead title={ar?"الإشعارات":"Notifications"} subtitle={ar?"تنبيهات الحساب والطلبات والأمان.":"Account, request and security alerts."}/>
       <div className="headingActions" style={{marginBottom:"1rem"}}>
-        {unread>0?<form action={markAllNotificationsReadAction}><input type="hidden" name="locale" value={locale}/><button className="secondaryButton" type="submit">{ar?`تعليم تعليم الكل كمقروء (${unread})`:`Mark all as read (${unread})`}</button></form>:null}
+        {unread>0?<form action={markAllNotificationsReadAction}><input type="hidden" name="locale" value={locale}/><button className="secondaryButton" type="submit">{ar?`تعليم الكل كمقروء (${unread})`:`Mark all as read (${unread})`}</button></form>:null}
       </div>
       <section className="panel notificationList">{notifications?.length?notifications.map(notification=>{
         const href=normalizeNotificationLink(notification.link,locale);
@@ -90,8 +94,22 @@ export default async function ClientSectionPage({params,searchParams}:{params:Pr
       }):<div className="emptyState">{ar?"لا توجد إشعارات.":"No notifications."}</div>}</section></>;
   }
 
-  const {data:logins}=await supabase.from("login_events").select("id,successful,country_hint,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(10);
-  return <><PageHead title={ar?"الأمان و2FA":"Security & 2FA"} subtitle={ar?"المصادقة الإضافية وسجل الدخول.":"Additional authentication and sign-in history."}/><div className="securityPageGrid"><MfaPanel locale={locale}/><section className="panel sessionPanel"><div className="panelHeading"><div><span>{ar?"أحداث الدخول":"Login events"}</span><h2>{ar?"آخر عمليات الدخول":"Recent sign-ins"}</h2></div><ShieldCheck/></div>{logins?.length?<div className="documentList">{logins.map(login=><div key={login.id}><span><b>{login.successful?(ar?"دخول ناجح":"Successful sign-in"):(ar?"محاولة فاشلة":"Failed attempt")}</b><small>{new Date(login.created_at).toLocaleString(ar?"ar-IQ":"en-GB")} · {login.country_hint||"—"}</small></span></div>)}</div>:<div className="emptyState">{ar?"لا توجد أحداث مسجلة بعد.":"No events recorded yet."}</div>}</section></div></>;
+  const loginPage=Math.max(1,Number(query.page||1)||1);
+  const [{data:logins},{data:dataRequests}]=await Promise.all([
+    supabase.from("login_events").select("id,successful,country_hint,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).range((loginPage-1)*10,loginPage*10-1),
+    supabase.from("data_requests").select("id,request_type,status,created_at,customer_reason").eq("user_id",user.id).order("created_at",{ascending:false}).limit(20),
+  ]);
+  return <><PageHead title={ar?"الأمان و2FA":"Security & 2FA"} subtitle={ar?"المصادقة الإضافية وسجل الدخول وطلبات البيانات.":"Additional authentication, sign-in history and data requests."}/>{feedback}<div className="securityPageGrid"><MfaPanel locale={locale}/><section className="panel sessionPanel"><div className="panelHeading"><div><span>{ar?"أحداث الدخول":"Login events"}</span><h2>{ar?"آخر عمليات الدخول":"Recent sign-ins"}</h2></div><ShieldCheck/></div>{logins?.length?<div className="documentList">{logins.map(login=><div key={login.id}><span><b>{login.successful?(ar?"دخول ناجح":"Successful sign-in"):(ar?"محاولة فاشلة":"Failed attempt")}</b><small>{new Date(login.created_at).toLocaleString(ar?"ar-IQ":"en-GB")} · {login.country_hint||"—"}</small></span></div>)}</div>:<div className="emptyState">{ar?"لا توجد أحداث مسجلة بعد.":"No events recorded yet."}</div>}</section></div>
+  <section className="panel"><div className="panelHeading"><div><span>{ar?"حقوق البيانات":"Data rights"}</span><h2>{ar?"طلب حذف أو تصدير البيانات":"Request deletion or data export"}</h2></div></div>
+    <p className="panelLead">{ar?"راجع سياسة الاحتفاظ قبل الإرسال. سجلات التدقيق الأمنية لا تُحذف تلقائياً.":"Review the retention policy before submitting. Security audit logs are not deleted automatically."}</p>
+    <form action={createDataRequestAction} className="formGrid"><input type="hidden" name="locale" value={locale}/>
+      <label><span>{ar?"نوع الطلب":"Request type"}</span><select name="requestType" required><option value="account_deletion">{ar?"حذف الحساب":"Account deletion"}</option><option value="data_export">{ar?"تصدير البيانات":"Data export"}</option><option value="data_correction">{ar?"تصحيح البيانات":"Data correction"}</option></select></label>
+      <label className="fullField"><span>{ar?"تفاصيل إضافية":"Additional details"}</span><textarea name="details" rows={4} maxLength={2000}/></label>
+      <button className="primaryButton" type="submit">{ar?"إرسال الطلب":"Submit request"}</button>
+    </form>
+    {dataRequests?.length?<div className="documentList" style={{marginTop:"1rem"}}>{dataRequests.map(item=><div key={item.id}><span><b>{item.request_type}</b><small>{systemStatusLabel(item.status,locale)}</small></span><small>{formatOrderDate(item.created_at,locale)}</small></div>)}</div>:null}
+    <p style={{marginTop:"1rem"}}><Link href={`/${locale}/legal/retention`}>{ar?"سياسة الاحتفاظ بالبيانات":"Data retention policy"}</Link> · <Link href={`/${locale}/legal/data-deletion`}>{ar?"حذف الحساب والبيانات":"Account and data deletion"}</Link></p>
+  </section></>;
 }
 
 function PageHead({title,subtitle}:{title:string;subtitle:string}){
@@ -101,13 +119,18 @@ function PageHead({title,subtitle}:{title:string;subtitle:string}){
 function TimelineItem({label,date,done}:{label:string;date?:string|null;done:boolean}){return <div className={done?"done":""}><i/><span><b>{label}</b><small>{date?new Date(date).toLocaleString():"—"}</small></span></div>}
 function normalizeNotificationLink(link:string|null|undefined,locale:"ar"|"en"){
   if(!link) return null;
-  if(link.startsWith(`/${locale}/`)) return link;
-  if(link.startsWith("/dashboard")||link.startsWith("/admin")) return `/${locale}${link}`;
-  if(link.startsWith("/ar/")||link.startsWith("/en/")) return link.replace(/^\/(ar|en)/,`/${locale}`);
+  // Customers may only open dashboard links — never admin or external URLs.
+  if(link.startsWith(`/${locale}/dashboard`)) return link;
+  if(link.startsWith("/dashboard")) return `/${locale}${link}`;
+  if(link.startsWith("/ar/dashboard")||link.startsWith("/en/dashboard")) {
+    return link.replace(/^\/(ar|en)/,`/${locale}`);
+  }
   return null;
 }
 function sectionErrorMessage(code:string,ar:boolean){
   switch(code){
+    case "intake_disabled":
+      return ar ? "رفع المستندات غير متاح حالياً خلال مرحلة التجهيز." : "Document upload is not available during the preparation phase.";
     case "invalid_wallet":
       return ar
         ? "عنوان المحفظة غير صالح. لـ TRC20 لازم يبدأ بـ T ويكون 34 حرفاً بدون الممنوعة 0 O I l. مثال: T9yD14Nj9j7xAB4dbGeiX9h8unkzUcsnQP"

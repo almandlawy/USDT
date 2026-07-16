@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
+import { isKycIntakeEnabled, isProofIntakeEnabled } from "@/lib/feature-flags";
 import { orderRequestSchema, proofMetadataSchema } from "@/lib/validation/forms";
 import { assertSameOrigin, requestFingerprint } from "@/lib/security/request";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -119,6 +120,7 @@ async function validateStoredUpload(supabase: Awaited<ReturnType<typeof createCl
 export async function uploadProofAction(formData: FormData) {
   const locale = String(formData.get("locale") || "ar");
   const { supabase, user } = await authenticatedClient(locale, "proofs");
+  if (!isProofIntakeEnabled()) redirect(`/${locale}/dashboard/proofs?error=intake_disabled`);
   const reference = parseUploadReference(formData.get("uploadedProof"));
   const parsed = proofMetadataSchema.safeParse({ transferReference: formData.get("transferReference"), senderName: formData.get("senderName"), amount: formData.get("amount"), paymentAt: formData.get("paymentAt"), customerNote: formData.get("customerNote") });
   const orderId = String(formData.get("orderId") || "");
@@ -133,6 +135,7 @@ export async function uploadProofAction(formData: FormData) {
 export async function submitKycAction(formData: FormData) {
   const locale = String(formData.get("locale") || "ar");
   const { supabase, user } = await authenticatedClient(locale, "kyc");
+  if (!isKycIntakeEnabled()) redirect(`/${locale}/dashboard/kyc?error=intake_disabled`);
   const accountType = formData.get("accountType") === "business" ? "business" : "individual";
   const nationality = String(formData.get("nationality") || "").trim().slice(0,80);
   const sourceOfFunds = String(formData.get("sourceOfFunds") || "").trim().slice(0,500);
@@ -164,6 +167,8 @@ export async function submitKycAction(formData: FormData) {
     reviewer_id: null,
     reviewed_at: null,
     review_notes: null,
+    customer_reason: null,
+    internal_review_notes: null,
     submitted_at: null,
   };
   const { data: kycCase, error: caseError } = await supabase.from("kyc_cases").upsert(payload, { onConflict: "user_id" }).select("id").single();
@@ -292,4 +297,23 @@ export async function createP2pOrderAction(formData: FormData) {
 
 export async function openDisputeAction(formData: FormData){
   const locale=String(formData.get("locale")||"ar");const {supabase,user}=await authenticatedClient(locale,"p2p");const p2pOrderId=String(formData.get("p2pOrderId")||"");const reason=String(formData.get("reason")||"").trim().slice(0,2000);if(!/^[0-9a-f-]{36}$/i.test(p2pOrderId)||reason.length<10)redirect(`/${locale}/dashboard/p2p?error=invalid_dispute`);const {error}=await supabase.from("disputes").insert({p2p_order_id:p2pOrderId,opened_by:user.id,reason});if(error)redirect(`/${locale}/dashboard/p2p?error=dispute_failed`);redirect(`/${locale}/dashboard/p2p?submitted=true`);
+}
+
+export async function createDataRequestAction(formData: FormData) {
+  const locale = String(formData.get("locale") || "ar");
+  const { supabase, user } = await authenticatedClient(locale, "security");
+  const requestType = String(formData.get("requestType") || "");
+  const details = String(formData.get("details") || "").trim().slice(0, 2000);
+  if (!["account_deletion", "data_export", "data_correction"].includes(requestType)) {
+    redirect(`/${locale}/dashboard/security?error=invalid_form`);
+  }
+  const { error } = await supabase.from("data_requests").insert({
+    user_id: user.id,
+    request_type: requestType,
+    status: "submitted",
+    details: details || null,
+  });
+  if (error) redirect(`/${locale}/dashboard/security?error=save_failed`);
+  revalidatePath(`/${locale}/dashboard/security`);
+  redirect(`/${locale}/dashboard/security?saved=true`);
 }
