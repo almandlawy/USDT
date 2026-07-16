@@ -129,10 +129,10 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
               locale={locale}
               registerHref={`/${locale}/register`}
               rates={{
-                usdtUsd: usdt.usd,
-                usdtAed: usdt.aed > 0 ? usdt.aed : usdt.usd * 3.6725,
-                usdtIqd: usdt.iqd > 0 ? usdt.iqd : 1310,
-                stale: market.stale,
+                usdtUsd: usdt?.usd && usdt.usd > 0 ? usdt.usd : 1,
+                usdtAed: usdt?.aed && usdt.aed > 0 ? usdt.aed : 3.6725,
+                usdtIqd: usdt?.iqd && usdt.iqd > 0 ? usdt.iqd : 1310,
+                stale: market.status === "fallback" || market.stale,
               }}
             />
           </div>
@@ -334,6 +334,9 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
             <h3>{ar ? "قانوني" : "Legal"}</h3>
             <Link href={`/${locale}/legal/terms`}>{ar ? "الشروط" : "Terms"}</Link>
             <Link href={`/${locale}/legal/privacy`}>{ar ? "الخصوصية" : "Privacy"}</Link>
+            <Link href={`/${locale}/legal/risk`}>{ar ? "المخاطر" : "Risk"}</Link>
+            <Link href={`/${locale}/legal/cookies`}>{ar ? "ملفات الارتباط" : "Cookies"}</Link>
+            <Link href={`/${locale}/legal/data-deletion`}>{ar ? "حذف البيانات" : "Data deletion"}</Link>
             <Link href={`/${locale}/legal/risk`}>{ar ? "المخاطر" : "Risk"}</Link>
           </div>
           <div className="footerLock">

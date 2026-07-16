@@ -5,8 +5,8 @@ import { Activity, RefreshCw, TriangleAlert } from "lucide-react";
 import type { MarketSnapshot } from "@/lib/market-data";
 import type { Locale } from "@/lib/constants";
 
-function formatMoney(value: number, digits = 2) {
-  if (!Number.isFinite(value) || value <= 0) return "—";
+function formatMoney(value: number | null | undefined, digits = 2) {
+  if (value == null || !Number.isFinite(value) || value <= 0) return "—";
   return value.toLocaleString("en-US", { maximumFractionDigits: digits });
 }
 
@@ -39,9 +39,13 @@ export function MarketTicker({ locale, initial }: { locale: Locale; initial: Mar
   }, []);
 
   const usdt = snapshot.assets.find((asset) => asset.symbol === "USDT");
-  const label = snapshot.stale
-    ? (ar ? "بيانات استرشادية احتياطية" : "Indicative fallback data")
-    : (ar ? "أسعار سوق استرشادية" : "Indicative market prices");
+  const status = snapshot.status || (snapshot.source === "fallback" ? "fallback" : snapshot.source === "coingecko+fx" ? "live_with_derived_fx" : "live");
+  const label =
+    status === "fallback"
+      ? (ar ? "مزود الأسعار غير متاح" : "Market provider unavailable")
+      : status === "live_with_derived_fx"
+        ? (ar ? "أسعار حية مع صرف محسوب" : "Live prices with derived FX")
+        : (ar ? "أسعار سوق استرشادية" : "Indicative market prices");
 
   return (
     <section className="marketStrip" aria-label={ar ? "أسعار السوق الاسترشادية" : "Indicative market prices"}>
@@ -51,9 +55,9 @@ export function MarketTicker({ locale, initial }: { locale: Locale; initial: Mar
           <span>
             <b>{label}</b>
             <small>
-              {snapshot.source === "fallback"
-                ? (ar ? "المزوّد غير متاح — عرض احتياطي" : "Provider unavailable — fallback shown")
-                : snapshot.source === "coingecko+fx"
+              {status === "fallback"
+                ? (ar ? "BTC/ETH غير متاحة — USDT مرجعي تقريبي فقط" : "BTC/ETH unavailable — USDT approximate reference only")
+                : status === "live_with_derived_fx"
                   ? (ar ? `IQD محسوب من USD (${snapshot.fxNote || "FX"})` : `IQD derived from USD (${snapshot.fxNote || "FX"})`)
                   : (ar ? "تحديث تلقائي كل دقيقة" : "Automatically refreshed every minute")}
             </small>
@@ -63,11 +67,17 @@ export function MarketTicker({ locale, initial }: { locale: Locale; initial: Mar
           {snapshot.assets.map((asset) => (
             <article key={asset.symbol}>
               <span>{asset.symbol}<small>{asset.name}</small></span>
-              <strong>${asset.usd < 10 ? formatMoney(asset.usd, 4) : formatMoney(asset.usd, 2)}</strong>
+              <strong>
+                {asset.available === false || asset.usd == null
+                  ? (ar ? "غير متاح" : "Unavailable")
+                  : `$${asset.usd < 10 ? formatMoney(asset.usd, 4) : formatMoney(asset.usd, 2)}`}
+              </strong>
               <em className={(asset.change24h || 0) >= 0 ? "up" : "down"}>
-                {asset.change24h == null ? "—" : `${asset.change24h >= 0 ? "+" : ""}${asset.change24h.toFixed(2)}%`}
+                {asset.change24h == null || asset.available === false
+                  ? "—"
+                  : `${asset.change24h >= 0 ? "+" : ""}${asset.change24h.toFixed(2)}%`}
               </em>
-              {asset.symbol === "USDT" && (
+              {asset.symbol === "USDT" && asset.available !== false && (
                 <small>
                   {formatMoney(asset.aed, 4)} AED · {formatMoney(asset.iqd, 2)} IQD
                 </small>
@@ -76,14 +86,18 @@ export function MarketTicker({ locale, initial }: { locale: Locale; initial: Mar
           ))}
         </div>
         <button className="marketRefresh" onClick={refresh} disabled={loading} aria-label={ar ? "تحديث الأسعار" : "Refresh prices"}>
-          {snapshot.stale ? <TriangleAlert /> : <RefreshCw className={loading ? "spinning" : ""} />}
+          {status === "fallback" ? <TriangleAlert /> : <RefreshCw className={loading ? "spinning" : ""} />}
         </button>
       </div>
       <p className="marketDisclaimer shell">
         {ar
           ? "بيانات سوق استرشادية فقط — ليست عرض شراء أو بيع ملزماً. لا يتم تنفيذ معاملات مالية."
           : "Indicative market data only — not a binding buy or sell quote. No financial transactions are executed."}
-        {usdt ? ` · ${ar ? "آخر تحديث" : "Updated"} ${new Date(snapshot.fetchedAt).toLocaleString(ar ? "ar-IQ" : "en-GB")}` : null}
+        {status === "fallback" && snapshot.lastSuccessAt
+          ? ` · ${ar ? "آخر نجاح" : "Last success"} ${new Date(snapshot.lastSuccessAt).toLocaleString(ar ? "ar-IQ" : "en-GB")}`
+          : usdt?.available !== false
+            ? ` · ${ar ? "آخر تحديث" : "Updated"} ${new Date(snapshot.fetchedAt).toLocaleString(ar ? "ar-IQ" : "en-GB")}`
+            : null}
       </p>
     </section>
   );

@@ -20,7 +20,7 @@
 
 ## Domain cutover
 
-After the Vercel production deployment is verified, add `gulfgatecargotrading.com` in Vercel and follow its DNS instructions in Namecheap Advanced DNS. Enable SSL and verify HSTS behavior before removing the old hosting files. Keep a backup and avoid destructive cPanel changes until the new deployment is healthy.
+After the Vercel production deployment is verified, add `YOUR_APPROVED_CUSTOM_DOMAIN` in Vercel and follow its DNS instructions in Namecheap Advanced DNS. Enable SSL and verify HSTS behavior before removing the old hosting files. Keep a backup and avoid destructive cPanel changes until the new deployment is healthy.
 
 ## Rollback
 

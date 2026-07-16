@@ -10,6 +10,7 @@ const workflows = readFileSync(resolve(process.cwd(), "supabase/migrations/20260
 const intelligence = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150006_intelligence_and_dual_control.sql"), "utf8");
 const aal2Fx = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150008_staff_rpc_aal2_and_fx_settings.sql"), "utf8");
 const customerNotify = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150009_customer_notifications_kyc_resubmit_fx_audit.sql"), "utf8");
+const readiness = readFileSync(resolve(process.cwd(), "supabase/migrations/202607150010_production_readiness_hardening.sql"), "utf8");
 
 describe("database launch invariants", () => {
   it("seeds live trading off and protects activation", () => {
@@ -100,5 +101,26 @@ describe("customer notification and KYC resubmit migration", () => {
     expect(customerNotify).toContain("audit_market_fx_settings");
     expect(customerNotify).not.toMatch(/live_trading'\s*,\s*'true'/i);
     expect(customerNotify).not.toMatch(/settlement_tx_hash\s*=/);
+  });
+});
+
+describe("production readiness migration 010", () => {
+  it("stores staff role not AAL in audit actor_role", () => {
+    expect(readiness).toContain("current_staff_role_label");
+    expect(readiness).toContain("actor_label := public.current_staff_role_label()");
+    expect(readiness).not.toMatch(/actor_role,\s*auth\.jwt\(\)->>'aal'/);
+  });
+
+  it("exposes FX public view without notes or updated_by", () => {
+    expect(readiness).toContain("market_fx_public");
+    expect(readiness).toContain("select usd_to_iqd, usd_to_aed, updated_at");
+    expect(readiness).toContain("update_market_fx");
+    expect(readiness).toContain("require_staff_aal2");
+  });
+
+  it("scopes staff notification visibility by kind", () => {
+    expect(readiness).toContain("notifications_staff_select");
+    expect(readiness).toContain("kind in ('support')");
+    expect(readiness).toContain("kind in ('kyc','compliance','ops')");
   });
 });

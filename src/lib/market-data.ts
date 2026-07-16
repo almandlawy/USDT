@@ -5,20 +5,25 @@ import { getMarketFxSettings } from "@/lib/market-fx";
 export type MarketAsset = {
   symbol: string;
   name: string;
-  usd: number;
-  aed: number;
-  iqd: number;
+  usd: number | null;
+  aed: number | null;
+  iqd: number | null;
   change24h: number | null;
-  updatedAt: string;
+  updatedAt: string | null;
+  available: boolean;
 };
+
+export type MarketStatus = "live" | "live_with_derived_fx" | "fallback";
 
 export type MarketSnapshot = {
   assets: MarketAsset[];
+  status: MarketStatus;
+  /** @deprecated prefer `status` */
   source: "coingecko" | "coingecko+fx" | "fallback";
   stale: boolean;
   fetchedAt: string;
+  lastSuccessAt: string | null;
   fxNote?: string;
-  providerError?: string | null;
   fxSource?: "database" | "environment";
 };
 
@@ -29,18 +34,21 @@ const coins = [
   { id: "usd-coin", symbol: "USDC", name: "USD Coin" },
 ] as const;
 
+let lastSuccessAt: string | null = null;
+
 function marketTimeoutMs() {
   const raw = Number(process.env.MARKET_PROVIDER_TIMEOUT_MS || 4000);
   return Number.isFinite(raw) && raw >= 1000 && raw <= 15_000 ? raw : 4000;
 }
 
-function fallbackAssets(now: string, usdIqd: number, usdAed: number): MarketAsset[] {
+function unavailableAssets(now: string, usdIqd: number, usdAed: number): MarketAsset[] {
+  // Only USDT may show an indicative 1 USD reference during provider outage.
   return [
-    { symbol: "USDT", name: "Tether", usd: 1, aed: usdAed, iqd: usdIqd, change24h: null, updatedAt: now },
-    { symbol: "BTC", name: "Bitcoin", usd: 65000, aed: 65000 * usdAed, iqd: 65000 * usdIqd, change24h: null, updatedAt: now },
-    { symbol: "ETH", name: "Ethereum", usd: 3500, aed: 3500 * usdAed, iqd: 3500 * usdIqd, change24h: null, updatedAt: now },
-    { symbol: "USDC", name: "USD Coin", usd: 1, aed: usdAed, iqd: usdIqd, change24h: null, updatedAt: now },
-  ];
+    { symbol: "USDT", name: "Tether", usd: 1, aed: usdAed, iqd: usdIqd, change24h: null, updatedAt: null, available: true },
+    { symbol: "BTC", name: "Bitcoin", usd: null, aed: null, iqd: null, change24h: null, updatedAt: null, available: false },
+    { symbol: "ETH", name: "Ethereum", usd: null, aed: null, iqd: null, change24h: null, updatedAt: null, available: false },
+    { symbol: "USDC", name: "USD Coin", usd: null, aed: null, iqd: null, change24h: null, updatedAt: null, available: false },
+  ].map((asset) => ({ ...asset, updatedAt: asset.symbol === "USDT" ? now : null }));
 }
 
 export async function getMarketSnapshot(): Promise<MarketSnapshot> {
@@ -72,26 +80,33 @@ export async function getMarketSnapshot(): Promise<MarketSnapshot> {
         iqd,
         change24h: typeof row?.usd_24h_change === "number" ? row.usd_24h_change : null,
         updatedAt: new Date(Number(row?.last_updated_at || Date.now() / 1000) * 1000).toISOString(),
+        available: true,
       };
     });
+    const fetchedAt = new Date().toISOString();
+    lastSuccessAt = fetchedAt;
+    const status: MarketStatus = derivedIqd ? "live_with_derived_fx" : "live";
     return {
       assets,
+      status,
       source: derivedIqd ? "coingecko+fx" : "coingecko",
-      stale: derivedIqd,
-      fetchedAt: new Date().toISOString(),
+      // Derived FX is not “stale market data” — only true fallback is stale.
+      stale: false,
+      fetchedAt,
+      lastSuccessAt,
       fxNote: derivedIqd ? `USD×${fx.usdToIqd} IQD` : undefined,
-      providerError: null,
       fxSource: fx.source,
     };
-  } catch (error) {
+  } catch {
     const now = new Date().toISOString();
     return {
-      assets: fallbackAssets(now, fx.usdToIqd, fx.usdToAed),
+      assets: unavailableAssets(now, fx.usdToIqd, fx.usdToAed),
+      status: "fallback",
       source: "fallback",
       stale: true,
       fetchedAt: now,
+      lastSuccessAt,
       fxNote: `USD×${fx.usdToIqd} IQD`,
-      providerError: error instanceof Error ? error.message.slice(0, 80) : "provider_unavailable",
       fxSource: fx.source,
     };
   }

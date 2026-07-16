@@ -90,11 +90,11 @@ async function loadRatesExtras(locale:"ar"|"en"){
       </div>
       <div className="metricGrid adminMetrics">
         <article className="metricCard"><span>{ar?"مصدر السعر":"Source"}</span><strong>{market.source}</strong><small>{market.stale?(ar?"بيانات احتياطية/مشتقة":"Stale / derived"):(ar?"آخر جلب ناجح":"Fresh fetch")}</small></article>
-        <article className="metricCard"><span>USDT / IQD</span><strong>{usdt&&usdt.iqd>0?usdt.iqd.toLocaleString(ar?"ar-IQ":"en-US"):"—"}</strong><small>{market.fxNote||"—"}</small></article>
+        <article className="metricCard"><span>USDT / IQD</span><strong>{usdt?.iqd != null && usdt.iqd > 0 ? usdt.iqd.toLocaleString(ar?"ar-IQ":"en-US") : "—"}</strong><small>{market.fxNote||"—"}</small></article>
         <article className="metricCard"><span>USD / IQD FX</span><strong>{fx.usdToIqd}</strong><small>{fx.source}</small></article>
         <article className="metricCard"><span>USD / AED FX</span><strong>{fx.usdToAed}</strong><small>{fx.updatedAt?new Date(fx.updatedAt).toLocaleString(ar?"ar-IQ":"en-GB"):(ar?"من البيئة":"From environment")}</small></article>
       </div>
-      {market.providerError?<div className="formAlert"><CircleAlert/>{ar?"تعذر الوصول للمزود — يتم استخدام الاحتياطي.":"Provider unreachable — using fallback."} ({market.providerError})</div>:null}
+      {market.status==="fallback"?<div className="formAlert"><CircleAlert/>{ar?"تعذر الوصول للمزود — BTC/ETH غير متاحة حالياً.":"Provider unreachable — BTC/ETH currently unavailable."}</div>:null}
       <p className="helperText">{ar?"الأسعار استرشادية فقط وليست عرض بيع أو شراء ملزم. لا تفتح تنفيذاً مالياً.":"Rates are indicative only and not a binding bid/offer. They do not unlock financial execution."}</p>
     </section>
     <section className="panel adminFormPanel">
@@ -103,7 +103,7 @@ async function loadRatesExtras(locale:"ar"|"en"){
         <input type="hidden" name="locale" value={locale}/>
         <label><span>USD → IQD</span><input name="usdToIqd" type="number" step="any" min="0.000001" defaultValue={fx.usdToIqd} required/></label>
         <label><span>USD → AED</span><input name="usdToAed" type="number" step="any" min="0.000001" defaultValue={fx.usdToAed} required/></label>
-        <label className="fullField"><span>{ar?"ملاحظة التدقيق":"Audit note"}</span><textarea name="notes" rows={2} defaultValue={fx.notes||""} placeholder={ar?"سبب التعديل":"Reason for change"}/></label>
+        <label className="fullField"><span>{ar?"ملاحظة التدقيق":"Audit note"}</span><textarea name="notes" rows={2} placeholder={ar?"سبب التعديل (للإدارة فقط)":"Reason for change (staff only)"}/></label>
         <button className="primaryButton" type="submit"><Save/>{ar?"حفظ الصرف وتسجيل التدقيق":"Save FX and audit"}</button>
       </form>
     </section>

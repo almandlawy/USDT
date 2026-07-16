@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getSiteOrigin } from "@/lib/site";
 
-const LEGAL_VERSION_DATE = new Date("2026-07-15T00:00:00.000Z");
+const LEGAL_VERSION_DATE = new Date("2026-07-16T00:00:00.000Z");
+const legalDocs = ["terms", "privacy", "risk", "cookies", "retention", "aup", "complaints", "data-deletion"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getSiteOrigin();
@@ -10,12 +11,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/en", priority: 1 },
     { path: "/ar/security-compliance", priority: 0.8 },
     { path: "/en/security-compliance", priority: 0.8 },
-    { path: "/ar/legal/terms", priority: 0.5 },
-    { path: "/en/legal/terms", priority: 0.5 },
-    { path: "/ar/legal/privacy", priority: 0.5 },
-    { path: "/en/legal/privacy", priority: 0.5 },
-    { path: "/ar/legal/risk", priority: 0.5 },
-    { path: "/en/legal/risk", priority: 0.5 },
+    ...legalDocs.flatMap((doc) => [
+      { path: `/ar/legal/${doc}`, priority: 0.5 },
+      { path: `/en/legal/${doc}`, priority: 0.5 },
+    ]),
   ] as const;
 
   return entries.map(({ path, priority }) => {

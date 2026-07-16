@@ -1,10 +1,79 @@
-import { MailCheck } from "lucide-react";
-import { resetPasswordAction, updatePasswordAction } from "../actions";
-import { isLocale } from "@/lib/i18n/dictionaries";
+import Link from "next/link";
+import { Mail, LockKeyhole } from "lucide-react";
 import { notFound } from "next/navigation";
+import { resetPasswordAction, updatePasswordAction } from "../actions";
+import { authErrorMessage } from "@/lib/auth-errors";
+import { isLocale } from "@/lib/i18n/dictionaries";
+import { TurnstileField } from "@/components/auth/turnstile-field";
+import { PasswordStrengthField } from "@/components/auth/password-strength";
+import { turnstileSiteKey } from "@/lib/security/turnstile-public";
 
-export default async function ResetPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ sent?: string; error?: string;mode?:string }> }) {
-  const { locale } = await params; if (!isLocale(locale)) notFound(); const ar = locale === "ar"; const query = await searchParams;
-  if(query.mode==="update")return <div className="authCard compactAuth"><div className="otpIcon"><MailCheck/></div><div className="authHeading centered"><span>SET NEW PASSWORD</span><h2>{ar?"كلمة مرور جديدة":"New password"}</h2><p>{ar?"يجب فتح هذه الصفحة من رابط الاستعادة الآمن.":"This page must be opened from the secure recovery link."}</p></div>{query.error&&<div className="formAlert">{ar?"تعذر تحديث كلمة المرور أو انتهت الجلسة.":"Could not update the password or the session expired."}</div>}<form action={updatePasswordAction} className="stackForm"><input type="hidden" name="locale" value={locale}/><label><span>{ar?"كلمة المرور الجديدة":"New password"}</span><input name="password" type="password" minLength={12} autoComplete="new-password" required/></label><label><span>{ar?"تأكيد كلمة المرور":"Confirm password"}</span><input name="confirmation" type="password" minLength={12} autoComplete="new-password" required/></label><button className="primaryButton wide">{ar?"تحديث كلمة المرور":"Update password"}</button></form></div>;
-  return <div className="authCard compactAuth"><div className="otpIcon"><MailCheck/></div><div className="authHeading centered"><span>PASSWORD RECOVERY</span><h2>{ar ? "استعادة كلمة المرور" : "Reset password"}</h2><p>{query.sent ? (ar ? "إذا كان البريد مسجلاً، أرسلنا رابطاً آمناً." : "If the email exists, a secure link was sent.") : (ar ? "سنرسل رابطاً محدود الصلاحية إلى بريدك." : "We will send a limited-time link to your email.")}</p></div><form action={resetPasswordAction} className="stackForm"><input type="hidden" name="locale" value={locale}/><label><span>{ar ? "البريد الإلكتروني" : "Email address"}</span><input name="email" type="email" autoComplete="email" required/></label><button className="primaryButton wide" type="submit">{ar ? "إرسال الرابط" : "Send reset link"}</button></form></div>;
+export default async function ResetPasswordPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ error?: string; sent?: string; mode?: string }>;
+}) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+  const ar = locale === "ar";
+  const query = await searchParams;
+  const updateMode = query.mode === "update";
+  const siteKey = turnstileSiteKey();
+
+  return (
+    <div className="authCard">
+      <div className="authHeading">
+        <span>{ar ? "استعادة الحساب" : "Account recovery"}</span>
+        <h2>{updateMode ? (ar ? "كلمة مرور جديدة" : "New password") : (ar ? "استعادة كلمة المرور" : "Reset password")}</h2>
+        <p>
+          {updateMode
+            ? (ar ? "اختر كلمة مرور قوية ثم سجّل الدخول من جديد." : "Choose a strong password, then sign in again.")
+            : (ar
+              ? "إذا كان البريد مسجلاً فستصلك رسالة استعادة خلال دقائق."
+              : "If the email is registered, a recovery message will arrive shortly.")}
+        </p>
+      </div>
+      {query.sent ? (
+        <div className="formSuccess" role="status">
+          {ar
+            ? "إذا كان البريد مسجلاً فستصلك رسالة استعادة خلال دقائق."
+            : "If the email is registered, a recovery message will arrive shortly."}
+        </div>
+      ) : null}
+      {query.error ? <div className="formAlert" role="alert">{authErrorMessage(query.error, locale)}</div> : null}
+
+      {updateMode ? (
+        <form action={updatePasswordAction} className="stackForm">
+          <input type="hidden" name="locale" value={locale} />
+          <PasswordStrengthField locale={locale} />
+          <label>
+            <span>{ar ? "تأكيد كلمة المرور" : "Confirm password"}</span>
+            <div className="fieldWithIcon">
+              <LockKeyhole />
+              <input name="confirmation" type="password" autoComplete="new-password" dir="ltr" minLength={12} required />
+            </div>
+          </label>
+          <button className="primaryButton wide" type="submit">{ar ? "حفظ كلمة المرور" : "Save password"}</button>
+        </form>
+      ) : (
+        <form action={resetPasswordAction} className="stackForm">
+          <input type="hidden" name="locale" value={locale} />
+          <label>
+            <span>{ar ? "البريد الإلكتروني" : "Email"}</span>
+            <div className="fieldWithIcon">
+              <Mail />
+              <input name="email" type="email" autoComplete="email" dir="ltr" required />
+            </div>
+          </label>
+          <TurnstileField siteKey={siteKey} locale={locale} />
+          <button className="primaryButton wide" type="submit">{ar ? "إرسال رابط الاستعادة" : "Send recovery link"}</button>
+        </form>
+      )}
+      <p className="authFooter">
+        <Link href={`/${locale}/login`}>{ar ? "العودة لتسجيل الدخول" : "Back to sign in"}</Link>
+      </p>
+    </div>
+  );
 }
