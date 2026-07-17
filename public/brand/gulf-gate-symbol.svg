@@ -1,15 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Gulf Gate architectural symbol">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Gulf Gate symbol">
   <title>Gulf Gate</title>
   <defs>
-    <linearGradient id="gold" x1="10" y1="7" x2="54" y2="57" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#E6CA88"/>
-      <stop offset="0.52" stop-color="#C7A25A"/>
-      <stop offset="1" stop-color="#8F6D2D"/>
+    <linearGradient id="gold" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D7BB80"/>
+      <stop offset="0.55" stop-color="#B58B45"/>
+      <stop offset="1" stop-color="#8F692F"/>
     </linearGradient>
   </defs>
-  <path d="M32 5 54 27v30H10V27L32 5Z" fill="none" stroke="url(#gold)" stroke-width="3" stroke-linejoin="round"/>
-  <path d="M32 14 45 28v20H19V28L32 14Z" fill="none" stroke="url(#gold)" stroke-width="2.2" stroke-linejoin="round"/>
-  <path d="M17 53V33m8 20V27m7 26V20m7 33V27m8 26V33" fill="none" stroke="url(#gold)" stroke-width="2.6" stroke-linecap="square"/>
-  <path d="M23 46h18" fill="none" stroke="#8F6D2D" stroke-width="2" stroke-linecap="round"/>
-  <path d="m32 35 4 4-4 4-4-4 4-4Z" fill="#C7A25A"/>
+  <path d="M11 52V29C11 16.8 20.4 8 32 8s21 8.8 21 21v23" fill="none" stroke="url(#gold)" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M20 52V31c0-7.7 5.3-13 12-13s12 5.3 12 13v21" fill="none" stroke="url(#gold)" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M16 52h32M24 52V29m8 23V23m8 29V29" fill="none" stroke="#191713" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="m32 34 4.2 4.2L32 42.4l-4.2-4.2L32 34Z" fill="#B58B45"/>
 </svg>
