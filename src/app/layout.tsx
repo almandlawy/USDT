@@ -3,8 +3,7 @@ import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Manrope } from "next/font/google";
 import { getSiteOrigin, SITE_NAME } from "@/lib/site";
 import "./globals.css";
-import "./luxury-theme.css";
-import "./luxury-components.css";
+import "./brand-system.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -42,7 +41,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   colorScheme: "light",
-  themeColor: "#FAF8F2",
+  themeColor: "#F3EFE6",
 };
 
 export default async function RootLayout({
