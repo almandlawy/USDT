@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { MarketingHeader } from "@/components/marketing/header";
 import { ExchangeDesk } from "@/components/marketing/exchange-desk";
 import { MarketTicker } from "@/components/marketing/market-ticker";
+import { CountryPaymentPanel } from "@/components/marketing/country-payment-panel";
 import { SeoJsonLd } from "@/components/marketing/seo-json-ld";
 import { ClayAccountIcon, ClayRequestIcon, ClayVerifyIcon } from "@/components/marketing/clay-icons";
 import { Logo } from "@/components/ui/logo";
@@ -17,6 +18,16 @@ import { getDictionary, isLocale } from "@/lib/i18n/dictionaries";
 import { getMarketSnapshot } from "@/lib/market-data";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
+import { COUNTRY_SEED, primaryCountries } from "@/lib/countries/catalog";
+import type { MatrixMethodRow } from "@/lib/payments/matrix";
+import {
+  companyBrandName,
+  companyLegalName,
+  companyPublicAddress,
+  companyReference,
+  companyReferencePublicLabel,
+  varaPublicDisclosure,
+} from "@/lib/company/legal";
 
 function contactValue(key: string) {
   const value = process.env[key]?.trim();
@@ -35,6 +46,8 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
   const usdt = market.assets.find((asset) => asset.symbol === "USDT") || market.assets[0];
 
   let paymentMethods: { name: string; code: string }[] = [];
+  let matrixRows: MatrixMethodRow[] = [];
+  let countries = primaryCountries(COUNTRY_SEED);
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -44,6 +57,43 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
       .order("sort_order");
     if (!error && data?.length) {
       paymentMethods = data.map((row) => ({ code: row.code, name: ar ? row.name_ar : row.name_en }));
+    }
+    const { data: countryRows } = await supabase
+      .from("countries")
+      .select("code,name_ar,name_en,currency_code,dialing_code,enabled,kyc_required,risk_level,sanctions_blocked,payment_region,kyc_jurisdiction,sort_order")
+      .order("sort_order");
+    if (countryRows?.length) {
+      countries = primaryCountries(countryRows as typeof COUNTRY_SEED);
+    }
+    const { data: availability } = await supabase
+      .from("payment_method_availability")
+      .select("id,payment_method_id,country_code,currency_code,enabled,min_amount,max_amount,percentage_fee,flat_fee,settlement_time_text_ar,settlement_time_text_en,requires_proof,requires_redirect,provider_approval_status,sort_order,payment_methods(code,name_ar,name_en)")
+      .eq("enabled", true)
+      .order("sort_order");
+    if (availability?.length) {
+      matrixRows = availability.map((row) => {
+        const pm = Array.isArray(row.payment_methods) ? row.payment_methods[0] : row.payment_methods;
+        return {
+          id: row.id,
+          payment_method_id: row.payment_method_id,
+          code: (pm?.code || "manual_proof") as MatrixMethodRow["code"],
+          name_ar: pm?.name_ar || row.country_code,
+          name_en: pm?.name_en || row.country_code,
+          country_code: row.country_code,
+          currency_code: row.currency_code,
+          enabled: row.enabled,
+          min_amount: row.min_amount,
+          max_amount: row.max_amount,
+          percentage_fee: Number(row.percentage_fee || 0),
+          flat_fee: Number(row.flat_fee || 0),
+          settlement_time_text_ar: row.settlement_time_text_ar,
+          settlement_time_text_en: row.settlement_time_text_en,
+          requires_proof: row.requires_proof,
+          requires_redirect: row.requires_redirect,
+          provider_approval_status: row.provider_approval_status,
+          sort_order: row.sort_order,
+        };
+      });
     }
   }
   if (!paymentMethods.length) {
@@ -57,12 +107,14 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
     ];
   }
 
-  const company = contactValue("NEXT_PUBLIC_COMPANY_NAME");
   const supportEmail = contactValue("NEXT_PUBLIC_SUPPORT_EMAIL");
   const whatsapp = contactValue("NEXT_PUBLIC_WHATSAPP_NUMBER");
-  const address = contactValue("NEXT_PUBLIC_COMPANY_ADDRESS");
   const hours = contactValue("NEXT_PUBLIC_WORKING_HOURS");
-  const license = contactValue("NEXT_PUBLIC_TRADE_LICENSE_NUMBER");
+  const brand = companyBrandName();
+  const legalName = companyLegalName();
+  const publicAddress = companyPublicAddress();
+  const companyRef = companyReference();
+  const vara = varaPublicDisclosure();
 
   const steps = ar
     ? [
@@ -139,6 +191,22 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
           </div>
         </section>
 
+        <CountryPaymentPanel locale={locale} countries={countries} matrixRows={matrixRows} />
+
+        <section id="secure-quote" className="sectionBlock">
+          <div className="shell">
+            <div className="sectionTitle">
+              <span>Gulf Gate Secure Quote Link</span>
+              <h2>{ar ? "رابط طلب ودفع مخصص بمبلغ محدد" : "A secure quote link with a fixed amount"}</h2>
+              <p>
+                {ar
+                  ? "ينشئ الموظف رابطاً آمناً بمدة صلاحية وتثبيت سعر. لا تُوضع المبالغ أو بيانات العميل داخل عنوان الرابط."
+                  : "Staff create a time-limited secure link with a locked rate. Amounts and customer PII are never placed in the URL."}
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section id="platform" className="sectionBlock">
           <div className="shell">
             <div className="sectionTitle">
@@ -196,9 +264,13 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
         <section id="payments" className="sectionBlock darkPanel">
           <div className="shell securityGrid">
             <div>
-              <span className="sectionKicker">{ar ? "طرق الدفع" : "Payment methods"}</span>
-              <h2>{ar ? "طرق الدفع المخطط دعمها" : "Planned payment methods"}</h2>
-              <p>{ar ? "نعرض الطرق النشطة للإعداد والتجربة فقط. لا تُطلب تحويلات حقيقية في هذه المرحلة." : "Active methods are shown for setup and testing only. Real transfers are not requested at this stage."}</p>
+              <span className="sectionKicker">{ar ? "وسائل الدفع حسب الدولة" : "Payment methods by country"}</span>
+              <h2>{ar ? "المصفوفة تُدار من لوحة الإدارة" : "Matrix managed from the admin panel"}</h2>
+              <p>
+                {ar
+                  ? "لا تُكتب الوسائل بشكل ثابت في الواجهة. العراق: FIB وSuperQi وزين كاش وتحويل بنكي — بلا Stripe. الإمارات: Stripe وe& money وdu Pay وتحويل بنكي وفق الموافقات. التفاصيل تظهر بعد إنشاء الطلب فقط."
+                  : "Methods are not hard-coded in JSX. Iraq: FIB, SuperQi, Zain Cash, bank transfer — no Stripe. UAE: Stripe, e& money, du Pay, bank transfer per approvals. Details appear only after order creation."}
+              </p>
             </div>
             <div className="chipGrid">
               {paymentMethods.map((method) => <span className="infoChip" key={method.code}><CreditCard size={16} />{method.name}</span>)}
@@ -299,13 +371,28 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
               <h2>{ar ? "قنوات واضحة عند توفرها" : "Clear channels when configured"}</h2>
             </div>
             <div className="contactGrid">
-              {company && <article><Building2 /><span>{ar ? "الاسم القانوني" : "Legal name"}</span><strong>{company}</strong></article>}
+              {brand && <article><Building2 /><span>{ar ? "العلامة" : "Brand"}</span><strong>{brand}</strong></article>}
+              {legalName && <article><Building2 /><span>{ar ? "الاسم القانوني" : "Legal name"}</span><strong>{legalName}</strong></article>}
+              {companyRef && (
+                <article>
+                  <Building2 />
+                  <span>{companyReferencePublicLabel(locale)}</span>
+                  <strong>{companyRef}</strong>
+                </article>
+              )}
               {supportEmail && <article><Mail /><span>{ar ? "بريد الدعم" : "Support email"}</span><a href={`mailto:${supportEmail}`}>{supportEmail}</a></article>}
               {whatsapp && <article><Phone /><span>WhatsApp</span><a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`} rel="noreferrer" target="_blank">{whatsapp}</a></article>}
               {hours && <article><LifeBuoy /><span>{ar ? "ساعات العمل" : "Working hours"}</span><strong>{hours}</strong></article>}
-              {address && <article><Building2 /><span>{ar ? "العنوان" : "Address"}</span><strong>{address}</strong></article>}
-              {license && <article><BadgeCheck /><span>{ar ? "رقم الرخصة" : "Trade licence"}</span><strong>{license}</strong></article>}
-              {!company && !supportEmail && !whatsapp && !hours && !address && !license && (
+              {publicAddress && <article><Building2 /><span>{ar ? "العنوان القانوني" : "Legal address"}</span><strong>{publicAddress}</strong></article>}
+              {vara.show && vara.licenseNumber && (
+                <article>
+                  <BadgeCheck />
+                  <span>{ar ? "ترخيص VARA (موثّق)" : "VARA licence (verified)"}</span>
+                  <strong>{vara.licenseNumber}</strong>
+                  <small>{vara.licenseType} · {vara.status}</small>
+                </article>
+              )}
+              {!brand && !supportEmail && !whatsapp && !hours && !publicAddress && !companyRef && (
                 <p className="formNotice">{ar ? "بيانات التواصل تُعرض هنا بعد إعدادها في بيئة التشغيل." : "Contact details appear here once configured in the environment."}</p>
               )}
             </div>

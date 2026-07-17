@@ -154,3 +154,91 @@ export async function saveMarketFxAction(formData: FormData) {
   revalidatePath(`/${locale}`);
   redirect(`/${locale}/admin/rates?saved=true`);
 }
+
+export async function createQuoteLinkAction(formData: FormData) {
+  const locale = (formData.get("locale") === "en" ? "en" : "ar") as Locale;
+  configured(locale, "quote-links");
+  await assertSameOrigin();
+  const staff = await requireStaff(locale, ["super_admin", "operations", "finance"]);
+
+  const countryCode = String(formData.get("countryCode") || "").toUpperCase();
+  const fiatCurrency = String(formData.get("fiatCurrency") || "").toUpperCase();
+  const fiatAmount = Number(formData.get("fiatAmount") || 0);
+  const usdtAmount = Number(formData.get("usdtAmount") || 0);
+  const marketRate = Number(formData.get("marketRate") || 0);
+  const customerRate = Number(formData.get("customerRate") || 0);
+  const feeAmount = Number(formData.get("feeAmount") || 0);
+  const totalAmount = Number(formData.get("totalAmount") || 0);
+  const spreadBps = Number(formData.get("spreadBps") || 0);
+  const network = String(formData.get("network") || "TRC20");
+  const walletMode = String(formData.get("walletMode") || "customer_entered");
+  const expirySeconds = Number(formData.get("expirySeconds") || 3600);
+  const rateLockSeconds = Number(formData.get("rateLockSeconds") || 300);
+  const maxUses = Number(formData.get("maxUses") || 1);
+  const singleUse = formData.get("singleUse") === "on";
+  const kycRequired = formData.get("kycRequired") === "on";
+  const allowedMethods = String(formData.get("allowedMethods") || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  if (!countryCode || fiatAmount <= 0 || usdtAmount <= 0 || marketRate <= 0 || customerRate <= 0 || totalAmount <= 0) {
+    redirect(`/${locale}/admin/quote-links?error=invalid_quote`);
+  }
+
+  const { generateQuotePublicToken, quoteLinkPath } = await import("@/lib/quote-links/token");
+  const { publicEnv } = await import("@/lib/env");
+  const tokenBundle = generateQuotePublicToken();
+  const now = Date.now();
+  const expiresAt = new Date(now + Math.max(60, expirySeconds) * 1000).toISOString();
+  const rateExpiresAt = new Date(now + Math.max(60, rateLockSeconds) * 1000).toISOString();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("quote_links")
+    .insert({
+      public_token_hash: tokenBundle.hash,
+      token_hint: tokenBundle.hint,
+      customer_name: String(formData.get("customerName") || "").trim() || null,
+      customer_email: String(formData.get("customerEmail") || "").trim() || null,
+      customer_phone: String(formData.get("customerPhone") || "").trim() || null,
+      country_code: countryCode,
+      fiat_currency: fiatCurrency,
+      fiat_amount: fiatAmount,
+      usdt_amount: usdtAmount,
+      amount_basis: String(formData.get("amountBasis") || "fiat"),
+      network,
+      wallet_mode: walletMode,
+      market_rate: marketRate,
+      spread_bps: spreadBps,
+      fee_amount: feeAmount,
+      total_amount: totalAmount,
+      customer_rate: customerRate,
+      allowed_payment_methods: allowedMethods,
+      kyc_required: kycRequired,
+      expires_at: expiresAt,
+      rate_expires_at: rateExpiresAt,
+      max_uses: Math.max(1, Math.min(100, maxUses || 1)),
+      single_use: singleUse,
+      status: "active",
+      notes: String(formData.get("notes") || "").trim().slice(0, 2000) || null,
+      created_by: staff.id,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) redirect(`/${locale}/admin/quote-links?error=quote_create_failed`);
+
+  await supabase.from("quote_link_events").insert({
+    quote_link_id: data.id,
+    event_type: "created",
+    actor_id: staff.id,
+    metadata: { country_code: countryCode, fiat_amount: fiatAmount },
+  });
+
+  const path = quoteLinkPath(locale, tokenBundle.token);
+  const absolute = `${publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}${path}`;
+  revalidatePath(`/${locale}/admin/quote-links`);
+  // Token shown once via redirect query for the creating staff member.
+  redirect(`/${locale}/admin/quote-links?saved=true&link=${encodeURIComponent(absolute)}`);
+}

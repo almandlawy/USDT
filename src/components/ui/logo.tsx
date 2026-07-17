@@ -1,15 +1,42 @@
+import Image from "next/image";
 import Link from "next/link";
 
-export function Logo({ locale = "ar", compact = false }: { locale?: string; compact?: boolean }) {
+type LogoProps = {
+  locale?: string;
+  compact?: boolean;
+  variant?: "dark" | "light";
+};
+
+export function Logo({ locale = "ar", compact = false, variant = "dark" }: LogoProps) {
+  if (compact) {
+    return (
+      <Link className="brand brandCompact" href={`/${locale}`} aria-label="Gulf Gate home">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/gulf-gate-symbol.svg" alt="" width={40} height={40} className="brandLogo" />
+        <span className="srOnly">Gulf Gate</span>
+      </Link>
+    );
+  }
+
+  const src = variant === "light" ? "/brand/gulf-gate-logo-light.svg" : "/brand/gulf-gate-logo-dark.svg";
   return (
     <Link className="brand" href={`/${locale}`} aria-label="Gulf Gate home">
-      <svg className="brandLogo" viewBox="0 0 58 58" aria-hidden="true">
-        <defs><linearGradient id="gold" x1="0" x2="1"><stop stopColor="#f7df9a"/><stop offset=".48" stopColor="#b78932"/><stop offset="1" stopColor="#f1ca6b"/></linearGradient></defs>
-        <path d="M29 4 51 16v26L29 54 7 42V16L29 4Z" fill="none" stroke="url(#gold)" strokeWidth="2"/>
-        <path d="M39 21.5c-2.6-3-5.9-4.5-10-4.5-7.1 0-12 5-12 12s4.9 12 12 12c3.5 0 6.4-.9 8.8-2.7V29H28v5h4.3v1.2c-.9.5-2 .8-3.3.8-4.1 0-6.8-2.8-6.8-7s2.7-7 6.8-7c2.6 0 4.6.9 6.3 2.8l3.7-3.3Z" fill="url(#gold)"/>
-        <path d="M39.5 18.5 43 22l-3.5 3.5" fill="none" stroke="#29d8ff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-      {!compact && <span><strong>GULF GATE</strong><small>DIGITAL ASSET OPERATIONS</small></span>}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="Gulf Gate — Digital Asset Operations" width={220} height={40} className="brandMark" />
     </Link>
+  );
+}
+
+/** Symbol-only mark for favicon-adjacent placements (emails, compact chrome). */
+export function BrandSymbol({ size = 40 }: { size?: number }) {
+  return (
+    <Image
+      src="/brand/gulf-gate-symbol.png"
+      alt=""
+      width={size}
+      height={size}
+      className="brandLogo"
+      unoptimized
+    />
   );
 }

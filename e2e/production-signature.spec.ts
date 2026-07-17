@@ -78,4 +78,30 @@ test.describe("production revision signature", () => {
       expect(eth?.usd).toBeNull();
     }
   });
+
+  test("brand assets and icons are published", async ({ request, page }) => {
+    for (const path of [
+      "/favicon.ico",
+      "/favicon.svg",
+      "/icon-32.png",
+      "/icon-192.png",
+      "/icon-512.png",
+      "/apple-touch-icon.png",
+      "/maskable-icon-192.png",
+      "/brand/gulf-gate-symbol.svg",
+      "/brand/gulf-gate-logo-dark.svg",
+      "/og/gulf-gate-cover.png",
+      "/manifest.webmanifest",
+    ]) {
+      const response = await request.get(path);
+      expect(response.status(), path).toBe(200);
+    }
+    await page.goto("/ar");
+    await expect(page.locator('.brand img, .brandMark, img[alt*="Gulf Gate"]').first()).toBeVisible();
+    const body = await page.locator("body").innerText();
+    expect(body).toMatch(/اشترِ USDT|Buy USDT|اختر دولة الدفع|Choose payment country/);
+    expect(body).not.toMatch(/FEE_BPS|3,?500\s*IQD/);
+    expect(body).not.toMatch(/VARA Licence Number|Trade Licence Number/);
+    expect(body).toMatch(/FIB|SuperQi|Zain Cash/);
+  });
 });

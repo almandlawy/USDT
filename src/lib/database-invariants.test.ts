@@ -143,3 +143,78 @@ describe("migration 011 customer reasons and data requests", () => {
     expect(kycReason).not.toMatch(/new\.internal_review_notes/);
   });
 });
+
+describe("migration 012 branding release marker", () => {
+  const branding = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150012_final_branding_and_release_hardening.sql"),
+    "utf8",
+  );
+  it("keeps live trading false and bumps schema marker", () => {
+    expect(branding).toContain("202607150012");
+    expect(branding).toContain("value = 'false'::jsonb");
+    expect(branding).toContain("kyc_intake_default");
+    expect(branding).toContain("proof_intake_default");
+  });
+});
+
+describe("migration 013/014 multi-country payments", () => {
+  const statusExt = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150013_order_status_extensions.sql"),
+    "utf8",
+  );
+  const payments = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150014_multi_country_payments_and_quotes.sql"),
+    "utf8",
+  );
+
+  it("adds payment_received_pending_review and fulfillment statuses", () => {
+    expect(statusExt).toContain("payment_received_pending_review");
+    expect(statusExt).toContain("approved_for_fulfillment");
+    expect(statusExt).toContain("fulfilled");
+  });
+
+  it("creates countries, matrix, quote links, and webhook ledger with RLS", () => {
+    for (const table of [
+      "countries",
+      "payment_method_availability",
+      "quote_links",
+      "quote_link_access_logs",
+      "quote_link_events",
+      "payment_webhook_events",
+      "bank_accounts",
+      "risk_rules",
+      "risk_assessments",
+      "market_price_snapshots",
+      "fx_rate_snapshots",
+      "quote_rate_locks",
+    ]) {
+      expect(payments).toContain(`create table if not exists public.${table}`);
+      expect(payments).toContain(`alter table public.${table} enable row level security`);
+    }
+  });
+
+  it("never unlocks live trading or auto fulfillment", () => {
+    expect(payments).toContain("('auto_fulfillment', false");
+    expect(payments).toContain("value = 'false'::jsonb");
+    expect(payments).toContain("LIVE_TRADING_DISABLED");
+    expect(payments).toContain("mark_payment_received_pending_review");
+    expect(payments).not.toMatch(/auto_fulfillment',\s*true/i);
+  });
+});
+
+describe("migration 015 Iraq/UAE routing correction", () => {
+  const correction = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150015_iraq_uae_payment_routing_correction.sql"),
+    "utf8",
+  );
+  it("disables Stripe for Iraq and seeds FIB/SuperQi/Zain/bank", () => {
+    expect(correction).toContain("country_code = 'IQ'");
+    expect(correction).toContain("'stripe_card'");
+    expect(correction).toContain("('fib'");
+    expect(correction).toContain("('superqi'");
+    expect(correction).toContain("signed_payment_instructions");
+    expect(correction).toContain("country_payment_accounts");
+    expect(correction).toContain("country_payment_methods_public");
+    expect(correction).toContain("Never expose via public API");
+  });
+});

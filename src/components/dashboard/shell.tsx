@@ -18,8 +18,8 @@ import { formatUnreadBadge } from "@/lib/notifications";
 const clientIcons = [LayoutDashboard, Shield, UserRound, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, History, LifeBuoy, Bell, Shield];
 const clientKeys = ["overview", "trust", "profile", "kyc", "buy", "sell", "p2p", "proofs", "orders", "support", "notifications", "security"] as const;
 const adminIcons = [LayoutDashboard, BrainCircuit, ListTodo, Users, BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Handshake, FileCheck2, CreditCard, BadgeDollarSign, Scale, SlidersHorizontal, Wallet, TriangleAlert, Gavel, Headphones, Bell, UserCog, Shield, ScrollText, FileCheck2, Settings, Flag];
-const adminKeys = ["dashboard", "intelligence", "ops", "customers", "kyc", "buyOrders", "sellOrders", "p2p", "proofs", "paymentMethods", "rates", "fees", "limits", "wallets", "compliance", "disputes", "support", "notifications", "staff", "roles", "audit", "legal", "settings", "flags"] as const;
-const adminSlugs = ["", "intelligence", "ops", "customers", "kyc", "buy-orders", "sell-orders", "p2p", "proofs", "payment-methods", "rates", "fees", "limits", "wallets", "compliance", "disputes", "support", "notifications", "staff", "roles", "audit", "legal", "settings", "feature-flags"];
+const adminKeys = ["dashboard", "intelligence", "ops", "customers", "kyc", "buyOrders", "sellOrders", "p2p", "proofs", "paymentMethods", "countries", "quoteLinks", "readiness", "rates", "fees", "limits", "wallets", "compliance", "disputes", "support", "notifications", "staff", "roles", "audit", "legal", "settings", "flags"] as const;
+const adminSlugs = ["", "intelligence", "ops", "customers", "kyc", "buy-orders", "sell-orders", "p2p", "proofs", "payment-methods", "countries", "quote-links", "readiness", "rates", "fees", "limits", "wallets", "compliance", "disputes", "support", "notifications", "staff", "roles", "audit", "legal", "settings", "feature-flags"];
 
 function isActivePath(pathname: string, href: string) {
   if (pathname === href) return true;

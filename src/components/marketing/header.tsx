@@ -15,8 +15,8 @@ export function MarketingHeader({ locale, dict }: { locale: Locale; dict: Dictio
         <Logo locale={locale} />
         <nav className="desktopNav" aria-label={locale === "ar" ? "التنقل الرئيسي" : "Primary navigation"}>
           <Link href={`${home}#platform`}>{dict.nav.platform}</Link>
+          <Link href={`${home}#how-it-works`}>{dict.nav.how}</Link>
           <Link href={`${home}#security`}>{dict.nav.security}</Link>
-          <Link href={`/${locale}/security-compliance`}>{dict.nav.compliance}</Link>
           <Link href={`${home}#faq`}>{dict.nav.faq}</Link>
         </nav>
         <div className="navActions">
@@ -27,8 +27,8 @@ export function MarketingHeader({ locale, dict }: { locale: Locale; dict: Dictio
             <summary aria-label={menuLabel}><Menu /></summary>
             <nav aria-label={menuLabel}>
               <Link href={`${home}#platform`}>{dict.nav.platform}</Link>
+              <Link href={`${home}#how-it-works`}>{dict.nav.how}</Link>
               <Link href={`${home}#security`}>{dict.nav.security}</Link>
-              <Link href={`/${locale}/security-compliance`}>{dict.nav.compliance}</Link>
               <Link href={`${home}#faq`}>{dict.nav.faq}</Link>
               <Link href={`/${locale}/login`}>{dict.nav.login}</Link>
               <Link href={`/${locale}/register`}>{dict.nav.start}</Link>

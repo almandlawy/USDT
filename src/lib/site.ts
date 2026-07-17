@@ -32,15 +32,15 @@ export const seoCopy = {
     title: "Gulf Gate | إدارة طلبات USDT والأصول الرقمية في العراق",
     shortTitle: "إدارة طلبات USDT والأصول الرقمية",
     description:
-      "منصة عراقية ثنائية اللغة لإدارة طلبات شراء وبيع USDT، والتحقق من الهوية، وإثباتات الدفع ضمن بيئة آمنة في وضع التجهيز قبل الإطلاق.",
-    legalDescription: "الإفصاحات القانونية والتنظيمية لمنصة Gulf Gate في وضع ما قبل الإطلاق.",
+      "منصة لإدارة طلبات USDT التجريبية والتحقق والمتابعة والدعم في العراق، دون تنفيذ مالي خلال مرحلة التجهيز.",
+    legalDescription: "الإفصاحات القانونية لمنصة Gulf Gate في وضع ما قبل الإطلاق — تتطلب مراجعة قانونية قبل الإطلاق العام.",
   },
   en: {
-    title: "Gulf Gate | Managed USDT & Digital Asset Requests in Iraq",
-    shortTitle: "Managed USDT and digital asset requests",
+    title: "Gulf Gate | USDT and Digital Asset Request Management",
+    shortTitle: "USDT and digital asset request management",
     description:
-      "A bilingual Iraqi platform for managing USDT buy and sell requests, identity verification, and payment evidence securely in pre-launch mode.",
-    legalDescription: "Legal and regulatory disclosures for the Gulf Gate pre-launch platform.",
+      "A secure pre-launch workspace for managing demo USDT requests, verification, tracking, and support.",
+    legalDescription: "Legal disclosures for the Gulf Gate pre-launch platform — legal review required before public launch.",
   },
 } as const;
 

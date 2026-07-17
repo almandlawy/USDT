@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Gulf Gate favicon">
+  <rect width="64" height="64" rx="12" fill="#071426"/>
+  <g transform="translate(4 4)">
+    <path fill="none" stroke="#C9A24D" stroke-width="3.5" stroke-linejoin="round" d="M12 12h40v40H12z"/>
+    <path fill="none" stroke="#C9A24D" stroke-width="2.4" stroke-linecap="round" d="M20 12v40M44 12v40"/>
+    <path fill="none" stroke="#E1BD69" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"
+          d="M28 23c-2.6-1.7-6-1.1-7.7 1.5-1.8 2.7-1 6.3 1.7 8 2.5 1.6 5.9 1 7.6-1.4"/>
+    <path fill="none" stroke="#E1BD69" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"
+          d="M43 23c-2.6-1.7-6-1.1-7.7 1.5-1.8 2.7-1 6.3 1.7 8 2.5 1.6 5.9 1 7.6-1.4"/>
+    <path fill="none" stroke="#28C7D9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+          d="M21 40h22m0 0-4-4M43 40l-4 4"/>
+  </g>
+</svg>
