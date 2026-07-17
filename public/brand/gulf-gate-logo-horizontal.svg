@@ -1,18 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 104" role="img" aria-label="Gulf Gate">
-  <title>Gulf Gate — Digital Asset Operations</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 96" role="img" aria-label="Gulf Gate">
+  <title>Gulf Gate</title>
   <defs>
-    <linearGradient id="gold" x1="8" y1="8" x2="88" y2="94" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#E6CA88"/>
-      <stop offset="0.52" stop-color="#C7A25A"/>
-      <stop offset="1" stop-color="#8F6D2D"/>
+    <linearGradient id="gold" x1="8" y1="8" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D7BB80"/>
+      <stop offset="0.55" stop-color="#B58B45"/>
+      <stop offset="1" stop-color="#8F692F"/>
     </linearGradient>
   </defs>
-  <g transform="translate(8 7) scale(1.38)">
-    <path d="M32 5 54 27v30H10V27L32 5Z" fill="none" stroke="url(#gold)" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M32 14 45 28v20H19V28L32 14Z" fill="none" stroke="url(#gold)" stroke-width="2.2" stroke-linejoin="round"/>
-    <path d="M17 53V33m8 20V27m7 26V20m7 33V27m8 26V33" fill="none" stroke="url(#gold)" stroke-width="2.6"/>
-    <path d="m32 35 4 4-4 4-4-4 4-4Z" fill="#C7A25A"/>
+  <g transform="translate(6 6)">
+    <path d="M8 72V38C8 20.4 21.4 8 38 8s30 12.4 30 30v34" fill="none" stroke="url(#gold)" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M21 72V41c0-10.5 7.5-18 17-18s17 7.5 17 18v31" fill="none" stroke="url(#gold)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M15 72h46M27 72V39m11 33V31m11 41V39" fill="none" stroke="#191713" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="m38 47 5.4 5.4-5.4 5.4-5.4-5.4L38 47Z" fill="#B58B45"/>
   </g>
-  <text x="116" y="52" fill="#111216" font-family="Georgia, Times New Roman, serif" font-size="36" font-weight="500" letter-spacing="8">GULF GATE</text>
-  <text x="119" y="78" fill="#8F6D2D" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" letter-spacing="4.1">DIGITAL ASSET OPERATIONS</text>
+  <text x="104" y="48" fill="#191713" font-family="Georgia, 'Times New Roman', serif" font-size="35" font-weight="600" letter-spacing="7">GULF GATE</text>
+  <text x="108" y="73" fill="#8F692F" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="700" letter-spacing="3.5">DIGITAL ASSET OPERATIONS</text>
 </svg>
