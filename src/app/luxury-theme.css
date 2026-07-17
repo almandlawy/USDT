@@ -1,5 +1,4 @@
-/* Gulf Gate — Ivory Architectural System
-   Mirrors the approved concept: warm ivory, charcoal, muted gold, precise geometry. */
+/* Gulf Gate — Ivory Architectural System */
 :root {
   --lux-ivory: #f7f5ef;
   --lux-paper: #fffdfa;
@@ -10,4 +9,280 @@
   --lux-gold: #c9a45a;
   --lux-gold-deep: #9f7b34;
   --lux-gold-soft: #ead9b4;
-  --lux-line: rgba
+  --lux-line: rgba(159, 123, 52, 0.20);
+  --lux-shadow: 0 24px 70px rgba(53, 45, 30, 0.12);
+  --color-bg: var(--lux-ivory);
+  --color-surface: var(--lux-paper);
+  --color-surface-elevated: #ffffff;
+  --color-border: var(--lux-line);
+  --color-text: var(--lux-ink);
+  --color-muted: var(--lux-muted);
+  --color-gold: var(--lux-gold);
+  --color-gold-hover: #d8b56d;
+  --color-cyan: #8b6b2f;
+  --ink: var(--lux-ink);
+  --muted: var(--lux-muted);
+  --line: var(--lux-line);
+  --navy-950: var(--lux-ivory);
+  --navy-900: var(--lux-ivory);
+  --navy-850: #f1eee7;
+  --navy-800: var(--lux-paper);
+  --navy-700: #ebe5da;
+  --gold-300: #d9b66f;
+  --gold-400: var(--lux-gold);
+  --gold-500: var(--lux-gold-deep);
+  --cyan-400: var(--lux-gold-deep);
+  --cyan-500: var(--lux-gold);
+  --shadow: var(--lux-shadow);
+}
+
+html, body { background: var(--lux-ivory); color: var(--lux-ink); }
+body {
+  background-image:
+    radial-gradient(circle at 9% 8%, rgba(201,164,90,.09), transparent 24%),
+    linear-gradient(rgba(159,123,52,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(159,123,52,.025) 1px, transparent 1px);
+  background-size: auto, 42px 42px, 42px 42px;
+}
+
+.primaryButton {
+  color: white;
+  background: linear-gradient(135deg, #d5b36c, #9f7b34);
+  box-shadow: 0 12px 26px rgba(159,123,52,.20);
+}
+.secondaryButton, .textButton, .langButton {
+  color: var(--lux-ink);
+  background: rgba(255,255,255,.7);
+  border-color: var(--lux-line);
+}
+.secondaryButton:hover, .langButton:hover { background: #fff; border-color: rgba(159,123,52,.45); }
+
+.prelaunchBanner {
+  color: #71551f;
+  background: #f1e6ce;
+  border-color: rgba(159,123,52,.22);
+}
+.prelaunchBanner strong { border-color: rgba(159,123,52,.28); }
+
+.marketingHeader {
+  background: rgba(255,253,250,.90);
+  border-color: rgba(159,123,52,.16);
+  box-shadow: 0 8px 28px rgba(67,54,30,.045);
+}
+.desktopNav { color: #5f5a50; }
+.desktopNav a:hover { color: var(--lux-gold-deep); }
+.brandMark { filter: none; }
+.marketStrip {
+  color: var(--lux-ink);
+  background: #f1eee7;
+  border-color: rgba(159,123,52,.13);
+}
+.marketAssets article { border-color: rgba(159,123,52,.14); }
+.marketAssets article strong, .marketLabel b { color: var(--lux-ink); }
+.marketLabel, .marketAssets article > small { color: var(--lux-gold-deep); }
+.marketRefresh { color: var(--lux-gold-deep); background: #fff; border-color: var(--lux-line); }
+
+.heroSection {
+  min-height: 760px;
+  color: var(--lux-ink);
+  background:
+    radial-gradient(circle at 78% 30%, rgba(201,164,90,.13), transparent 25%),
+    radial-gradient(circle at 18% 88%, rgba(230,227,220,.9), transparent 30%),
+    linear-gradient(145deg, #fffefa 0%, #f7f5ef 55%, #efebe3 100%);
+}
+.heroSection::before {
+  opacity: .36;
+  background-image:
+    linear-gradient(rgba(159,123,52,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(159,123,52,.045) 1px, transparent 1px);
+  background-size: 54px 54px;
+}
+.mintOrb { background: rgba(201,164,90,.07); box-shadow: 0 0 150px rgba(201,164,90,.14); }
+.goldOrb { background: rgba(17,18,22,.035); box-shadow: 0 0 110px rgba(17,18,22,.06); }
+.heroCopy h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--lux-charcoal);
+  font-weight: 500;
+  letter-spacing: -.035em;
+}
+[dir="rtl"] .heroCopy h1 { font-family: var(--font-ar); font-weight: 700; }
+.heroCopy h1 span {
+  color: var(--lux-gold-deep);
+  background: none;
+  -webkit-text-fill-color: initial;
+}
+.heroCopy > p { color: #625e55; }
+.heroBrand .brand small { color: var(--lux-gold-deep); }
+.trustRow { color: #6f6a61; }
+.trustRow svg { color: var(--lux-gold-deep); }
+.statusBadge.warning { color: #765920; border-color: rgba(159,123,52,.32); background: rgba(201,164,90,.10); }
+
+.exchangeDesk {
+  color: var(--lux-ink);
+  background: rgba(255,255,255,.82);
+  border: 1px solid rgba(159,123,52,.21);
+  box-shadow: var(--lux-shadow);
+  backdrop-filter: blur(18px);
+}
+.exchangeTabs { background: #eee9df; }
+.exchangeTabs button { color: #716b60; }
+.exchangeTabs button.active { color: white; background: linear-gradient(135deg,#d5b36c,#9f7b34); }
+.exchangeBadge { color: #74571f; background: #f4ead5; }
+.exchangeField { border-color: #e1dbcf; background: #fffefa; }
+.exchangeField small, .exchangeNote { color: #756f65; }
+.exchangeField strong, .exchangeField input, .exchangeField output { color: #25231f; }
+.exchangeField select, .assetChip { color: #27241f; background: #f6f2e9; border-color: #dfd6c5; }
+.exchangeSwap { color: var(--lux-gold-deep); border-color: #dfd6c5; }
+.exchangeBreakdown > div { color: #6d675d; }
+.exchangeBreakdown dd { color: #2e2a24; }
+
+.sectionBlock, .stepsSection { background: var(--lux-ivory); color: var(--lux-ink); }
+.sectionBlock:nth-of-type(even) { background: #f1eee7; }
+.sectionTitle > span, .sectionKicker { color: var(--lux-gold-deep); }
+.sectionTitle h2, .securityGrid h2 {
+  color: var(--lux-charcoal);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+}
+[dir="rtl"] .sectionTitle h2, [dir="rtl"] .securityGrid h2 { font-family: var(--font-ar); font-weight: 700; }
+.sectionTitle p, .securityGrid > div > p { color: #726d64; }
+.featureCard, .stepCard, .gate, .contactGrid article, .faqList details {
+  background: rgba(255,255,255,.82);
+  border-color: rgba(159,123,52,.17);
+  box-shadow: 0 16px 42px rgba(53,45,30,.06);
+}
+.featureCard:hover, .stepCard:hover, .gate:hover { transform: translateY(-4px); border-color: rgba(159,123,52,.38); }
+.featureIcon { color: var(--lux-gold-deep); background: #f3ead8; }
+.featureCard p, .stepCard p, .gate p { color: #756f66; }
+.stepCard h3, .featureCard h3, .gate h3 { color: var(--lux-charcoal); }
+.clayIconMedia { background: #efe4cd; box-shadow: 0 18px 38px rgba(105,80,34,.11); }
+
+.darkPanel {
+  color: #f8f4ec;
+  background:
+    radial-gradient(circle at 85% 10%, rgba(201,164,90,.13), transparent 25%),
+    linear-gradient(135deg,#111216,#26231e);
+}
+.darkPanel .sectionKicker { color: #d6b46d; }
+.darkPanel h2 { color: #fffaf0; }
+.darkPanel .infoChip, .darkPanel .securityStack > div {
+  color: #f5efe4;
+  background: rgba(255,255,255,.045);
+  border-color: rgba(218,183,111,.20);
+}
+.securityStack > div > svg { color: #d6b46d; }
+
+.faqList details { color: var(--lux-ink); }
+.faqList summary { color: var(--lux-charcoal); }
+.faqList p { color: #736d63; }
+.contactGrid article span { color: #827b70; }
+.contactGrid article strong, .contactGrid article a { color: var(--lux-charcoal); }
+
+.mainFooter {
+  color: #f5f0e7;
+  background: linear-gradient(135deg,#111216,#20201e);
+  border-top: 1px solid rgba(201,164,90,.22);
+}
+.mainFooter a:hover { color: #d8b56d; }
+.footerLock { border-color: rgba(201,164,90,.22); background: rgba(255,255,255,.03); }
+
+.authPage { color: var(--lux-ink); background: var(--lux-ivory); }
+.authGrid { background: var(--lux-ivory); }
+.authVisual {
+  color: #fffaf0;
+  background:
+    radial-gradient(circle at 60% 20%, rgba(201,164,90,.20), transparent 30%),
+    linear-gradient(150deg,#171714,#28251f);
+}
+.authVisual::after {
+  content: "";
+  position: absolute;
+  width: 360px;
+  height: 520px;
+  inset-inline-end: -80px;
+  bottom: -170px;
+  border: 2px solid rgba(213,179,108,.34);
+  border-radius: 180px 180px 18px 18px;
+  box-shadow: 0 0 0 24px rgba(213,179,108,.055), 0 0 0 48px rgba(213,179,108,.025);
+}
+.authKicker { color: #d6b46d; }
+.authVisual p, .authVisual li { color: #d5d0c7; }
+.authMain { background: #f7f5ef; }
+.authCard {
+  background: rgba(255,255,255,.9);
+  border-color: rgba(159,123,52,.18);
+  box-shadow: var(--lux-shadow);
+}
+.authHeading span { color: var(--lux-gold-deep); }
+.authHeading h2 { color: var(--lux-charcoal); }
+.authHeading p, .authTrustList { color: #716b62; }
+.stackForm label > span { color: #49463f; }
+.fieldWithIcon, .stackForm select, .stackForm input, .stackForm textarea {
+  color: var(--lux-ink);
+  background: #fffefa;
+  border-color: #ddd5c7;
+}
+.fieldWithIcon svg { color: var(--lux-gold-deep); }
+.formMeta, .authFooter { color: #777168; }
+.formMeta a, .authFooter a, .legalCheck a { color: var(--lux-gold-deep); }
+
+.appFrame { color: var(--lux-ink); background: var(--lux-ivory); }
+.appSidebar {
+  color: #eee9df;
+  background: linear-gradient(180deg,#141512,#24211c);
+  border-color: rgba(201,164,90,.17);
+}
+.workspaceLabel { color: #d4b36c; }
+.sideNav a { color: #c9c3b8; }
+.sideNav a:hover, .sideNav a.active { color: white; background: rgba(201,164,90,.12); }
+.sideNav a.active::before { background: #d5b36c; }
+.sidebarBottom { border-color: rgba(201,164,90,.14); }
+.appMain { background: var(--lux-ivory); }
+.appTopbar {
+  background: rgba(255,253,250,.9);
+  border-color: rgba(159,123,52,.15);
+  backdrop-filter: blur(18px);
+}
+.topbarKicker { color: var(--lux-gold-deep); }
+.avatar, .notificationBell, .mobileNavTrigger { color: var(--lux-gold-deep); background: #f2ead9; border-color: rgba(159,123,52,.17); }
+.appContent :is(.dashboardCard,.metricCard,.dataCard,.panel,.tableCard,.settingsCard,.adminCard) {
+  background: rgba(255,255,255,.86);
+  border-color: rgba(159,123,52,.16);
+  box-shadow: 0 14px 36px rgba(53,45,30,.055);
+}
+.appContent table { color: var(--lux-ink); }
+.appContent th { color: #756e63; background: #f1eee7; }
+.appContent td { border-color: #e6dfd3; }
+
+.portalArtwork { position: relative; min-height: 560px; display: grid; place-items: center; isolation: isolate; }
+.portalGlow { position: absolute; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle,rgba(201,164,90,.25),transparent 67%); filter: blur(10px); }
+.portalRings { position: absolute; inset: 40px 0 80px; display: grid; place-items: center; }
+.portalRings i { position: absolute; width: calc(270px + var(--i,0)*30px); height: calc(420px + var(--i,0)*34px); border: 1px solid rgba(159,123,52,.15); border-radius: 150px 150px 24px 24px; }
+.portalRings i:nth-child(1){width:300px;height:440px}.portalRings i:nth-child(2){width:330px;height:470px}.portalRings i:nth-child(3){width:360px;height:500px}.portalRings i:nth-child(4){width:390px;height:530px}.portalRings i:nth-child(5){width:420px;height:560px}
+.portalArch { position: relative; z-index: 2; width: 245px; height: 390px; padding: 18px; border-radius: 132px 132px 12px 12px; background: linear-gradient(135deg,#e2c27f,#9f7b34 60%,#6e511e); box-shadow: 0 32px 60px rgba(90,67,25,.22); }
+.portalArchInner { width: 100%; height: 100%; padding: 20px; border-radius: 112px 112px 8px 8px; background: #f4efe5; }
+.portalDoor { width: 100%; height: 100%; display: grid; place-items: center; border: 1px solid rgba(159,123,52,.28); border-radius: 94px 94px 6px 6px; background: linear-gradient(180deg,#fffefa,#eee5d3); }
+.portalDoor span { color: var(--lux-gold-deep); font-family: Georgia,serif; font-size: 42px; letter-spacing: -.08em; }
+.portalPlinth { position: absolute; z-index: 3; bottom: 88px; display: grid; justify-items: center; }
+.portalPlinth i { display: block; height: 10px; background: linear-gradient(90deg,#d8d1c4,#fff,#d8d1c4); border: 1px solid rgba(159,123,52,.14); }
+.portalPlinth i:nth-child(1){width:270px}.portalPlinth i:nth-child(2){width:310px}.portalPlinth i:nth-child(3){width:350px}
+.portalReflection { position: absolute; bottom: 0; width: 420px; height: 100px; background: radial-gradient(ellipse,rgba(201,164,90,.18),transparent 65%); transform: scaleY(.45); }
+.portalMicroCards { position: absolute; z-index: 5; inset-inline: 0; bottom: 8px; display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.portalMicroCards article { display: flex; align-items: center; gap: 9px; padding: 12px; border: 1px solid rgba(159,123,52,.16); border-radius: 12px; background: rgba(255,255,255,.82); box-shadow: 0 10px 28px rgba(53,45,30,.06); }
+.portalMicroCards svg { color: var(--lux-gold-deep); }
+.portalMicroCards span { display: grid; gap: 2px; }
+.portalMicroCards b { color: var(--lux-charcoal); font-size: 11px; }
+.portalMicroCards small { color: #777168; font-size: 8px; }
+
+@media (max-width: 900px) {
+  .heroSection { min-height: auto; }
+  .portalArtwork { min-height: 480px; }
+  .portalMicroCards { position: relative; bottom: auto; margin-top: 22px; grid-template-columns: 1fr; width: min(420px,100%); }
+}
+@media (max-width: 640px) {
+  .marketingHeader { background: rgba(255,253,250,.96); }
+  .heroCopy h1 { font-size: 42px; }
+  .portalArtwork { min-height: 430px; transform: scale(.86); margin-inline: -30px; }
+  .authVisual { display: none; }
+  .authMain { background: var(--lux-ivory); }
+}
