@@ -10,7 +10,7 @@ import { timingSafeEqual } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
-const EXPECTED_MIGRATION = "202607150011";
+const EXPECTED_MIGRATION = "202607150012";
 
 function tokenOk(provided: string | null, expected: string | undefined) {
   if (!provided || !expected || expected.length < 32) return false;
@@ -115,6 +115,12 @@ export async function GET() {
   const liveTradingLocked = envLocked && dbLiveTrading !== true;
   const migrationOk = !migrationMarker || migrationMarker >= "202607150010";
   const readiness = trustContactReadiness();
+  const intake = {
+    kyc: process.env.KYC_INTAKE_ENABLED === "true",
+    proof: process.env.PROOF_INTAKE_ENABLED === "true",
+    kycPublic: process.env.NEXT_PUBLIC_KYC_INTAKE_ENABLED === "true",
+    proofPublic: process.env.NEXT_PUBLIC_PROOF_INTAKE_ENABLED === "true",
+  };
 
   const degraded =
     database === "unconfigured" ||
@@ -143,12 +149,13 @@ export async function GET() {
         migrationMarker,
         expectedMigration: EXPECTED_MIGRATION,
         trustContact: readiness,
+        intakeFlags: intake,
       },
       version: {
         commitSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.COMMIT_SHA || null,
         deploymentId: process.env.VERCEL_DEPLOYMENT_ID || null,
         env: process.env.VERCEL_ENV || process.env.NODE_ENV || null,
-        buildTime: process.env.BUILD_TIME || null,
+        buildTime: process.env.BUILD_TIME || process.env.VERCEL_GIT_COMMIT_SHA || null,
         migrationsVersion: migrationMarker || "unknown",
       },
       checkedAt: new Date().toISOString(),

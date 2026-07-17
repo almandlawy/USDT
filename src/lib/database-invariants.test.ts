@@ -143,3 +143,16 @@ describe("migration 011 customer reasons and data requests", () => {
     expect(kycReason).not.toMatch(/new\.internal_review_notes/);
   });
 });
+
+describe("migration 012 branding release marker", () => {
+  const branding = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150012_final_branding_and_release_hardening.sql"),
+    "utf8",
+  );
+  it("keeps live trading false and bumps schema marker", () => {
+    expect(branding).toContain("202607150012");
+    expect(branding).toContain("value = 'false'::jsonb");
+    expect(branding).toContain("kyc_intake_default");
+    expect(branding).toContain("proof_intake_default");
+  });
+});

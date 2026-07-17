@@ -1,25 +1,47 @@
 :root {
-  --navy-950: #030914;
-  --navy-900: #07111f;
+  /* Brand tokens — see docs/BRAND_GUIDELINES.md */
+  --color-bg: #071426;
+  --color-surface: #0C1D33;
+  --color-surface-elevated: #12263f;
+  --color-border: rgba(173, 196, 221, .14);
+  --color-text: #F4F7FA;
+  --color-muted: #94A3B8;
+  --color-gold: #C9A24D;
+  --color-gold-hover: #E1BD69;
+  --color-cyan: #28C7D9;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 8px 24px rgba(0, 0, 0, .18);
+  --shadow-md: 0 16px 40px rgba(0, 0, 0, .22);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, .26);
+
+  /* Legacy aliases kept for existing selectors */
+  --navy-950: var(--color-bg);
+  --navy-900: var(--color-bg);
   --navy-850: #0a1728;
-  --navy-800: #0d1d31;
+  --navy-800: var(--color-surface);
   --navy-700: #152a43;
   --forest: #004a3c;
   --mint: #7affa1;
   --mint-deep: #1fbf7a;
-  --gold-300: #f7dea0;
-  --gold-400: #e1bc62;
-  --gold-500: #b98b35;
-  --cyan-400: #39dbff;
+  --gold-300: var(--color-gold-hover);
+  --gold-400: var(--color-gold);
+  --gold-500: #A9842F;
+  --cyan-400: var(--color-cyan);
   --cyan-500: #16bddd;
-  --ink: #eaf1f8;
-  --muted: #8fa2b7;
-  --line: rgba(173, 196, 221, .14);
-  --danger: #ff6f7d;
-  --success: #45d6a5;
-  --warning: #f4c562;
-  --radius: 20px;
-  --shadow: 0 24px 70px rgba(0, 0, 0, .26);
+  --ink: var(--color-text);
+  --muted: var(--color-muted);
+  --line: var(--color-border);
+  --danger: var(--color-danger);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --radius: var(--radius-xl);
+  --shadow: var(--shadow-lg);
   --font-body: var(--font-display), "Manrope", sans-serif;
   --font-ar: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif;
 }
@@ -73,10 +95,12 @@ svg { flex: 0 0 auto; }
 
 /* Brand and notices */
 .brand { display: inline-flex; align-items: center; gap: 11px; }
-.brandLogo { width: 45px; height: 45px; }
+.brandLogo { width: 40px; height: 40px; display: block; }
+.brandMark { width: min(220px, 52vw); height: auto; display: block; }
 .brand span { display: grid; gap: 1px; }
 .brand strong { font-size: 16px; letter-spacing: .13em; }
-.brand small { color: var(--muted); font-size: 7px; letter-spacing: .12em; }
+.brand small { color: var(--color-muted); font-size: 7px; letter-spacing: .12em; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .prelaunchBanner { min-height: 36px; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 7px 18px; color: #f2d994; background: #111a25; border-bottom: 1px solid rgba(244,197,98,.18); text-align: center; font-size: 12px; }
 .prelaunchBanner strong { padding-inline-start: 10px; border-inline-start: 1px solid rgba(244,197,98,.25); font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .05em; }
 
@@ -636,3 +660,13 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; animation: none !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

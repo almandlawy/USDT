@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 96" role="img" aria-label="Gulf Gate light">
+  <title>Gulf Gate  light</title>
+  <defs>
+    <linearGradient id="ggGoldL" x1="8" y1="10" x2="86" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C9A24D"/>
+      <stop offset="1" stop-color="#8F6F28"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(4 8)">
+    <path fill="none" stroke="url(#ggGoldL)" stroke-width="4" stroke-linejoin="round" d="M14 12h52v56H14z"/>
+    <path fill="none" stroke="url(#ggGoldL)" stroke-width="2.8" stroke-linecap="round" d="M26 12v56M54 12v56"/>
+    <path fill="none" stroke="url(#ggGoldL)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"
+          d="M38 28c-3.6-2.3-8.3-1.5-10.6 2.1-2.5 3.7-1.4 8.6 2.3 11 3.5 2.2 8.1 1.4 10.4-1.9"/>
+    <path fill="none" stroke="url(#ggGoldL)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"
+          d="M57 28c-3.6-2.3-8.3-1.5-10.6 2.1-2.5 3.7-1.4 8.6 2.3 11 3.5 2.2 8.1 1.4 10.4-1.9"/>
+    <path fill="none" stroke="#0E7490" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+          d="M28 52h26m0 0-5.5-5.5M54 52l-5.5 5.5"/>
+  </g>
+  <text x="108" y="48" fill="#071426" font-family="ui-sans-serif, system-ui, sans-serif" font-size="34" font-weight="750" letter-spacing="7">GULF GATE</text>
+  <text x="110" y="74" fill="#475569" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="600" letter-spacing="3.4">DIGITAL ASSET OPERATIONS</text>
+</svg>

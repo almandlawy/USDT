@@ -29,6 +29,14 @@ jobs:
           test -f supabase/migrations/202607150009_customer_notifications_kyc_resubmit_fx_audit.sql
           test -f supabase/migrations/202607150010_production_readiness_hardening.sql
           test -f supabase/migrations/202607150011_kyc_customer_reason_and_data_requests.sql
+          test -f supabase/migrations/202607150012_final_branding_and_release_hardening.sql
+          test -f supabase/verify-production.sql
+          test -f public/brand/gulf-gate-symbol.svg
+          test -f public/favicon.svg
+          test -f public/favicon.ico
+          test -f public/og/gulf-gate-cover.png
+          test -f public/icon-192.png
+          test -f public/icon-512.png
           if grep -RInE "LIVE_TRADING[[:space:]]*=[[:space:]]*true" supabase/migrations; then
             echo "Live trading enablement found in migrations" && exit 1
           fi
