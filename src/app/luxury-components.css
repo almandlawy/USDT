@@ -14,6 +14,17 @@
   background: #e2eee5;
 }
 
+.countrySelectorPrompt {
+  margin: 0;
+  padding: 16px 22px;
+  color: #8f6d2d;
+  background: #fffefa;
+  border-bottom: 1px solid rgba(143, 109, 45, .15);
+  font: 800 10px ui-monospace, monospace;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
 .authVisualCopy {
   position: relative;
   z-index: 2;
