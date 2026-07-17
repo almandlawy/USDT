@@ -91,6 +91,7 @@ export function CountryPaymentSelector({
 
   return (
     <div className="countrySelector" data-region={region}>
+      <p className="countrySelectorPrompt">{ar ? "اختر دولة الدفع" : "Choose payment country"}</p>
       <div className="countryTabs" role="tablist" aria-label={ar ? "اختيار دولة الدفع" : "Select payment country"}>
         {(Object.keys(copy) as RegionCode[]).map((code) => (
           <button
