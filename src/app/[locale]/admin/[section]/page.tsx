@@ -11,15 +11,16 @@ import { createClient } from "@/lib/supabase/server";
 import {
   grantStaffRoleAction, reviewKycAction, reviewProofAction, saveMarketFxAction, savePaymentMethodAction,
   savePricingAction, saveWalletAddressAction, setTradingAction, updateFeatureFlagAction,
-  updateOrderStatusAction,
+  updateOrderStatusAction, createQuoteLinkAction,
 } from "../actions";
+import { paymentReadinessSnapshot } from "@/lib/payments/flags";
 
-const sections = ["customers","kyc","buy-orders","sell-orders","p2p","proofs","payment-methods","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","feature-flags"] as const;
+const sections = ["customers","kyc","buy-orders","sell-orders","p2p","proofs","payment-methods","countries","quote-links","readiness","rates","fees","limits","wallets","compliance","disputes","support","notifications","staff","roles","audit","legal","settings","feature-flags"] as const;
 type Section = typeof sections[number];
 type Row = Record<string, unknown>;
 
 const titles: Record<Section,[string,string]> = {
-  customers:["العملاء","Customers"],kyc:["التحقق KYC","KYC reviews"],"buy-orders":["طلبات الشراء","Buy orders"],"sell-orders":["طلبات البيع","Sell orders"],p2p:["طلبات P2P","P2P orders"],proofs:["إثباتات الدفع","Payment proofs"],"payment-methods":["طرق الدفع","Payment methods"],rates:["الأسعار","Rates"],fees:["الرسوم","Fees"],limits:["الحدود","Limits"],wallets:["عناوين المحافظ","Wallet addresses"],compliance:["تنبيهات الامتثال","Compliance alerts"],disputes:["النزاعات","Disputes"],support:["الدعم","Support tickets"],notifications:["الإشعارات","Notifications"],staff:["الموظفون","Staff"],roles:["الصلاحيات","Roles"],audit:["سجل التدقيق","Audit log"],legal:["المحتوى القانوني","Legal content"],settings:["إعدادات الموقع","Site settings"],"feature-flags":["مفاتيح الميزات","Feature flags"],
+  customers:["العملاء","Customers"],kyc:["التحقق KYC","KYC reviews"],"buy-orders":["طلبات الشراء","Buy orders"],"sell-orders":["طلبات البيع","Sell orders"],p2p:["طلبات P2P","P2P orders"],proofs:["إثباتات الدفع","Payment proofs"],"payment-methods":["طرق الدفع","Payment methods"],countries:["الدول","Countries"],"quote-links":["روابط العروض","Quote links"],readiness:["جاهزية الإنتاج","Production readiness"],rates:["الأسعار","Rates"],fees:["الرسوم","Fees"],limits:["الحدود","Limits"],wallets:["عناوين المحافظ","Wallet addresses"],compliance:["تنبيهات الامتثال","Compliance alerts"],disputes:["النزاعات","Disputes"],support:["الدعم","Support tickets"],notifications:["الإشعارات","Notifications"],staff:["الموظفون","Staff"],roles:["الصلاحيات","Roles"],audit:["سجل التدقيق","Audit log"],legal:["المحتوى القانوني","Legal content"],settings:["إعدادات الموقع","Site settings"],"feature-flags":["مفاتيح الميزات","Feature flags"],
 };
 
 function display(value: unknown) {
@@ -41,6 +42,9 @@ async function loadSection(section:Section) {
     case "p2p":table="p2p_orders";columns="id,reference_number,status,buyer_id,seller_id,fiat_currency,amount_fiat,manual_release_required,created_at";break;
     case "proofs":table="payment_proofs";columns="id,order_id,user_id,status,sender_name,amount,transfer_reference,mismatch_flag,created_at";break;
     case "payment-methods":table="payment_methods";columns="code,name_en,account_holder,account_number_masked,phone,supported_currencies,min_amount,max_amount,active,sort_order";break;
+    case "countries":table="countries";columns="code,name_en,currency_code,enabled,kyc_required,risk_level,sanctions_blocked,payment_region,sort_order";break;
+    case "quote-links":table="quote_links";columns="id,token_hint,country_code,fiat_currency,fiat_amount,usdt_amount,network,status,expires_at,used_count,max_uses,created_at";break;
+    case "readiness":table="site_settings";columns="key,value,updated_at";break;
     case "rates":table="pricing_settings";columns="id,order_type,fiat_currency,network,reference_rate,spread_bps,quote_ttl_seconds,active";break;
     case "fees":table="fee_rules";columns="id,order_type,fiat_currency,network,flat_fee,percentage_fee,active,effective_from,effective_to";break;
     case "limits":table="limit_rules";columns="id,account_type,kyc_status,order_type,fiat_currency,min_amount,max_amount,daily_limit,monthly_limit,active";break;
@@ -75,7 +79,7 @@ export default async function AdminSectionPage({params,searchParams}:{params:Pro
     {(query.saved||query.updated)&&<div className="formSuccess"><ShieldCheck/>{ar?"تم الحفظ وسُجل التغيير.":"Saved and audit logged."}</div>}
     {ratesExtras}
     <section className="panel"><div className="panelHeading"><div><span>{ar?"سجلات مضبوطة":"Controlled records"}</span><h2>{titles[section][ar?0:1]}</h2></div><StatusBadge tone="neutral">{data.rows.length}</StatusBadge></div>{rows.length?<DataTable columns={keys} rows={rows}/>:<div className="emptyState"><ShieldCheck/><h3>{ar?"لا توجد سجلات":"No records"}</h3><p>{ar?"ستظهر البيانات هنا بعد إنشائها.":"Records will appear here when created."}</p></div>}</section>
-    {section==="kyc"&&<ReviewForm locale={locale} kind="kyc"/>}{section==="proofs"&&<ReviewForm locale={locale} kind="proofs"/>}{["buy-orders","sell-orders"].includes(section)&&<ReviewForm locale={locale} kind="orders"/>}{section==="payment-methods"&&<PaymentMethodForm locale={locale}/>} {section==="rates"&&<PricingForm locale={locale}/>} {section==="wallets"&&<WalletForm locale={locale}/>} {section==="roles"&&<RoleForm locale={locale}/>} {section==="feature-flags"&&<FeatureFlags rows={data.rows} locale={locale}/>} {section==="settings"&&<><TrustReadinessPanel locale={locale}/><ActivationForm locale={locale}/></>}</>;
+    {section==="kyc"&&<ReviewForm locale={locale} kind="kyc"/>}{section==="proofs"&&<ReviewForm locale={locale} kind="proofs"/>}{["buy-orders","sell-orders"].includes(section)&&<ReviewForm locale={locale} kind="orders"/>}{section==="payment-methods"&&<PaymentMethodForm locale={locale}/>} {section==="quote-links"&&<QuoteLinkGenerator locale={locale}/>} {section==="readiness"&&<PaymentReadinessPanel locale={locale}/>} {section==="rates"&&<PricingForm locale={locale}/>} {section==="wallets"&&<WalletForm locale={locale}/>} {section==="roles"&&<RoleForm locale={locale}/>} {section==="feature-flags"&&<FeatureFlags rows={data.rows} locale={locale}/>} {section==="settings"&&<><TrustReadinessPanel locale={locale}/><ActivationForm locale={locale}/></>}</>;
 }
 
 function TrustReadinessPanel({locale}:{locale:"ar"|"en"}){
@@ -179,7 +183,61 @@ function ReviewForm({locale,kind}:{locale:"ar"|"en";kind:"kyc"|"proofs"|"orders"
   </section>;
 }
 
-function PaymentMethodForm({locale}:{locale:"ar"|"en"}){const ar=locale==="ar";return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>PAYMENT METHOD</span><h2>{ar?"إضافة أو تعديل طريقة":"Add or update method"}</h2></div></div><form action={savePaymentMethodAction} className="formGrid"><input type="hidden" name="locale" value={locale}/><label><span>Type</span><select name="code">{["bank_transfer","fib","superqi","zain_cash","cash_representative","wallet_transfer"].map(v=><option key={v}>{v}</option>)}</select></label><label><span>{ar?"صاحب الحساب":"Account holder"}</span><input name="accountHolder"/></label><label><span>{ar?"الاسم العربي":"Arabic name"}</span><input name="nameAr" required/></label><label><span>{ar?"الاسم الإنجليزي":"English name"}</span><input name="nameEn" required/></label><label><span>{ar?"الحساب المخفي":"Masked account"}</span><input name="accountNumberMasked"/></label><label><span>{ar?"الهاتف":"Phone"}</span><input name="phone"/></label><label><span>{ar?"المدينة":"City"}</span><input name="city"/></label><label><span>{ar?"المدن المدعومة":"Supported cities"}</span><input name="cities"/></label><label><span>Min</span><input name="minAmount" type="number"/></label><label><span>Max</span><input name="maxAmount" type="number"/></label><label><span>{ar?"الترتيب":"Sort order"}</span><input name="sortOrder" type="number" defaultValue="100"/></label><label className="checkLine"><input type="checkbox" name="active"/>{ar?"فعالة":"Active"}</label><fieldset className="fullField checkGroup"><legend>{ar?"العملات":"Currencies"}</legend>{["USD","AED","IQD"].map(v=><label key={v}><input type="checkbox" name="currencies" value={v}/>{v}</label>)}</fieldset><label className="fullField"><span>{ar?"تعليمات عربية":"Arabic instructions"}</span><textarea name="instructionsAr" rows={3}/></label><label className="fullField"><span>{ar?"تعليمات إنجليزية":"English instructions"}</span><textarea name="instructionsEn" rows={3}/></label><button className="primaryButton" type="submit"><Save/>{ar?"حفظ":"Save"}</button></form></section>}
+function PaymentMethodForm({locale}:{locale:"ar"|"en"}){const ar=locale==="ar";return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>PAYMENT METHOD</span><h2>{ar?"إضافة أو تعديل طريقة":"Add or update method"}</h2></div></div><form action={savePaymentMethodAction} className="formGrid"><input type="hidden" name="locale" value={locale}/><label><span>Type</span><select name="code">{["bank_transfer","fib","superqi","zain_cash","cash_representative","wallet_transfer","stripe_card","eand_money","dupay","manual_proof"].map(v=><option key={v}>{v}</option>)}</select></label><label><span>{ar?"صاحب الحساب":"Account holder"}</span><input name="accountHolder"/></label><label><span>{ar?"الاسم العربي":"Arabic name"}</span><input name="nameAr" required/></label><label><span>{ar?"الاسم الإنجليزي":"English name"}</span><input name="nameEn" required/></label><label><span>{ar?"الحساب المخفي":"Masked account"}</span><input name="accountNumberMasked"/></label><label><span>{ar?"الهاتف":"Phone"}</span><input name="phone"/></label><label><span>{ar?"المدينة":"City"}</span><input name="city"/></label><label><span>{ar?"المدن المدعومة":"Supported cities"}</span><input name="cities"/></label><label><span>Min</span><input name="minAmount" type="number"/></label><label><span>Max</span><input name="maxAmount" type="number"/></label><label><span>{ar?"الترتيب":"Sort order"}</span><input name="sortOrder" type="number" defaultValue="100"/></label><label className="checkLine"><input type="checkbox" name="active"/>{ar?"فعالة":"Active"}</label><fieldset className="fullField checkGroup"><legend>{ar?"العملات":"Currencies"}</legend>{["USD","AED","IQD","SAR","QAR","KWD","BHD","OMR","EUR","GBP"].map(v=><label key={v}><input type="checkbox" name="currencies" value={v}/>{v}</label>)}</fieldset><label className="fullField"><span>{ar?"تعليمات عربية":"Arabic instructions"}</span><textarea name="instructionsAr" rows={3}/></label><label className="fullField"><span>{ar?"تعليمات إنجليزية":"English instructions"}</span><textarea name="instructionsEn" rows={3}/></label><button className="primaryButton" type="submit"><Save/>{ar?"حفظ":"Save"}</button></form></section>}
+
+function QuoteLinkGenerator({locale}:{locale:"ar"|"en"}){
+  const ar=locale==="ar";
+  return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>SECURE QUOTE LINK</span><h2>{ar?"إنشاء رابط عرض آمن":"Create secure quote link"}</h2></div></div>
+    <form action={createQuoteLinkAction} className="formGrid">
+      <input type="hidden" name="locale" value={locale}/>
+      <label><span>{ar?"اسم العميل":"Customer name"}</span><input name="customerName"/></label>
+      <label><span>Email</span><input name="customerEmail" type="email"/></label>
+      <label><span>{ar?"الهاتف":"Phone"}</span><input name="customerPhone"/></label>
+      <label><span>{ar?"الدولة":"Country"}</span><select name="countryCode" required>{["IQ","AE","SA","QA","KW","BH","OM","US","GB","EU","OTHER"].map(c=><option key={c}>{c}</option>)}</select></label>
+      <label><span>{ar?"العملة":"Fiat currency"}</span><select name="fiatCurrency" required>{["IQD","AED","USD","SAR","QAR","KWD","BHD","OMR","EUR","GBP"].map(c=><option key={c}>{c}</option>)}</select></label>
+      <label><span>{ar?"أساس المبلغ":"Amount basis"}</span><select name="amountBasis"><option value="fiat">Fiat</option><option value="usdt">USDT</option></select></label>
+      <label><span>{ar?"المبلغ الورقي":"Fiat amount"}</span><input name="fiatAmount" type="number" step="any" required/></label>
+      <label><span>{ar?"كمية USDT":"USDT amount"}</span><input name="usdtAmount" type="number" step="any" required/></label>
+      <label><span>{ar?"السعر السوقي":"Market rate"}</span><input name="marketRate" type="number" step="any" required/></label>
+      <label><span>Spread bps</span><input name="spreadBps" type="number" defaultValue="0"/></label>
+      <label><span>{ar?"الرسوم":"Fee"}</span><input name="feeAmount" type="number" step="any" defaultValue="0"/></label>
+      <label><span>{ar?"الإجمالي":"Total"}</span><input name="totalAmount" type="number" step="any" required/></label>
+      <label><span>{ar?"سعر العميل":"Customer rate"}</span><input name="customerRate" type="number" step="any" required/></label>
+      <label><span>{ar?"الشبكة":"Network"}</span><select name="network"><option>TRC20</option><option>ERC20</option><option>BEP20</option></select></label>
+      <label><span>{ar?"وضع المحفظة":"Wallet mode"}</span><select name="walletMode"><option value="customer_entered">Customer entered</option><option value="fixed">Fixed</option></select></label>
+      <label><span>{ar?"صلاحية الرابط (ثوانٍ)":"Link TTL seconds"}</span><input name="expirySeconds" type="number" defaultValue="3600"/></label>
+      <label><span>{ar?"تثبيت السعر (ثوانٍ)":"Rate lock seconds"}</span><input name="rateLockSeconds" type="number" defaultValue="300"/></label>
+      <label><span>Max uses</span><input name="maxUses" type="number" defaultValue="1"/></label>
+      <label className="checkLine"><input type="checkbox" name="singleUse" defaultChecked/>{ar?"استخدام لمرة واحدة":"Single use"}</label>
+      <label className="checkLine"><input type="checkbox" name="kycRequired"/>{ar?"يتطلب KYC":"KYC required"}</label>
+      <label className="fullField"><span>{ar?"وسائل الدفع المسموحة (مفصولة بفاصلة)":"Allowed methods (comma-separated)"}</span><input name="allowedMethods" placeholder="zain_cash,bank_transfer,manual_proof"/></label>
+      <label className="fullField"><span>{ar?"ملاحظات داخلية":"Internal notes"}</span><textarea name="notes" rows={3}/></label>
+      <button className="primaryButton" type="submit"><Save/>{ar?"إنشاء الرابط":"Create link"}</button>
+    </form>
+  </section>;
+}
+
+function PaymentReadinessPanel({locale}:{locale:"ar"|"en"}){
+  const ar=locale==="ar";
+  const snap = paymentReadinessSnapshot();
+  const rows: [string, string][] = [
+    ["LIVE_TRADING", String(snap.liveTrading)],
+    ["REAL_PAYMENTS_ENABLED", String(snap.realPaymentsEnabled)],
+    ["AUTO_FULFILLMENT_ENABLED", String(snap.autoFulfillmentEnabled)],
+    ["STRIPE_ENABLED", String(snap.stripeEnabled)],
+    ["STRIPE_CRYPTO_APPROVED", String(snap.stripeCryptoApproved)],
+    ["Stripe checkout allowed", String(snap.stripeCheckoutAllowed)],
+    ["ZAINCASH_ENABLED", String(snap.zainCashEnabled)],
+    ["Zain Cash checkout allowed", String(snap.zainCashCheckoutAllowed)],
+    ["e& money mode", snap.eandMoneyMode],
+    ["du Pay mode", snap.duPayMode],
+    ["Bank transfer enabled", String(snap.bankTransferEnabled)],
+  ];
+  return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>GATES</span><h2>{ar?"جاهزية المدفوعات والتسليم":"Payments & fulfillment readiness"}</h2></div></div>
+    <ul className="paymentMethodMatrix">{rows.map(([k,v])=><li key={k}><div><strong>{k}</strong><span>{v}</span></div></li>)}</ul>
+    <p className="methodHint">{ar?"التسليم التلقائي مقفول. كل دفع ناجح → payment_received_pending_review. كل تسليم يحتاج موافقة بشرية وTransaction Hash.":"Auto fulfillment is locked. Successful payment → payment_received_pending_review. Fulfillment needs human approval and a blockchain tx hash."}</p>
+  </section>;
+}
 
 function PricingForm({locale}:{locale:"ar"|"en"}){return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>INDICATIVE PRICING</span><h2>Rates, fees & limits</h2></div></div><form action={savePricingAction} className="formGrid"><input type="hidden" name="locale" value={locale}/><label><span>Order type</span><select name="orderType">{["buy","sell","p2p"].map(v=><option key={v}>{v}</option>)}</select></label><label><span>Currency</span><select name="currency">{["USD","AED","IQD"].map(v=><option key={v}>{v}</option>)}</select></label><label><span>Network</span><select name="network"><option>TRC20</option><option>ERC20</option></select></label>{[["referenceRate","Reference rate"],["spreadBps","Spread bps"],["flatFee","Flat fee"],["percentageFee","Fee %"],["minAmount","Min"],["maxAmount","Max"],["quoteTtl","Quote TTL seconds"]].map(([n,l])=><label key={n}><span>{l}</span><input name={n} type="number" step="any" required={n==="referenceRate"||n==="quoteTtl"}/></label>)}<label><span>Label</span><input name="label"/></label><label className="checkLine"><input type="checkbox" name="active"/>Active</label><button className="primaryButton"><Save/>Save</button></form></section>}
 

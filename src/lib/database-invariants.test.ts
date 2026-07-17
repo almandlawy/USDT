@@ -156,3 +156,48 @@ describe("migration 012 branding release marker", () => {
     expect(branding).toContain("proof_intake_default");
   });
 });
+
+describe("migration 013/014 multi-country payments", () => {
+  const statusExt = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150013_order_status_extensions.sql"),
+    "utf8",
+  );
+  const payments = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150014_multi_country_payments_and_quotes.sql"),
+    "utf8",
+  );
+
+  it("adds payment_received_pending_review and fulfillment statuses", () => {
+    expect(statusExt).toContain("payment_received_pending_review");
+    expect(statusExt).toContain("approved_for_fulfillment");
+    expect(statusExt).toContain("fulfilled");
+  });
+
+  it("creates countries, matrix, quote links, and webhook ledger with RLS", () => {
+    for (const table of [
+      "countries",
+      "payment_method_availability",
+      "quote_links",
+      "quote_link_access_logs",
+      "quote_link_events",
+      "payment_webhook_events",
+      "bank_accounts",
+      "risk_rules",
+      "risk_assessments",
+      "market_price_snapshots",
+      "fx_rate_snapshots",
+      "quote_rate_locks",
+    ]) {
+      expect(payments).toContain(`create table if not exists public.${table}`);
+      expect(payments).toContain(`alter table public.${table} enable row level security`);
+    }
+  });
+
+  it("never unlocks live trading or auto fulfillment", () => {
+    expect(payments).toContain("('auto_fulfillment', false");
+    expect(payments).toContain("value = 'false'::jsonb");
+    expect(payments).toContain("LIVE_TRADING_DISABLED");
+    expect(payments).toContain("mark_payment_received_pending_review");
+    expect(payments).not.toMatch(/auto_fulfillment',\s*true/i);
+  });
+});

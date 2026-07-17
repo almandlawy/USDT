@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { MarketingHeader } from "@/components/marketing/header";
 import { ExchangeDesk } from "@/components/marketing/exchange-desk";
 import { MarketTicker } from "@/components/marketing/market-ticker";
+import { CountryPaymentPanel } from "@/components/marketing/country-payment-panel";
 import { SeoJsonLd } from "@/components/marketing/seo-json-ld";
 import { ClayAccountIcon, ClayRequestIcon, ClayVerifyIcon } from "@/components/marketing/clay-icons";
 import { Logo } from "@/components/ui/logo";
@@ -17,6 +18,8 @@ import { getDictionary, isLocale } from "@/lib/i18n/dictionaries";
 import { getMarketSnapshot } from "@/lib/market-data";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
+import { COUNTRY_SEED } from "@/lib/countries/catalog";
+import type { MatrixMethodRow } from "@/lib/payments/matrix";
 
 function contactValue(key: string) {
   const value = process.env[key]?.trim();
@@ -35,6 +38,8 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
   const usdt = market.assets.find((asset) => asset.symbol === "USDT") || market.assets[0];
 
   let paymentMethods: { name: string; code: string }[] = [];
+  let matrixRows: MatrixMethodRow[] = [];
+  let countries = COUNTRY_SEED;
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -44,6 +49,43 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
       .order("sort_order");
     if (!error && data?.length) {
       paymentMethods = data.map((row) => ({ code: row.code, name: ar ? row.name_ar : row.name_en }));
+    }
+    const { data: countryRows } = await supabase
+      .from("countries")
+      .select("code,name_ar,name_en,currency_code,dialing_code,enabled,kyc_required,risk_level,sanctions_blocked,payment_region,kyc_jurisdiction,sort_order")
+      .order("sort_order");
+    if (countryRows?.length) {
+      countries = countryRows as typeof COUNTRY_SEED;
+    }
+    const { data: availability } = await supabase
+      .from("payment_method_availability")
+      .select("id,payment_method_id,country_code,currency_code,enabled,min_amount,max_amount,percentage_fee,flat_fee,settlement_time_text_ar,settlement_time_text_en,requires_proof,requires_redirect,provider_approval_status,sort_order,payment_methods(code,name_ar,name_en)")
+      .eq("enabled", true)
+      .order("sort_order");
+    if (availability?.length) {
+      matrixRows = availability.map((row) => {
+        const pm = Array.isArray(row.payment_methods) ? row.payment_methods[0] : row.payment_methods;
+        return {
+          id: row.id,
+          payment_method_id: row.payment_method_id,
+          code: (pm?.code || "manual_proof") as MatrixMethodRow["code"],
+          name_ar: pm?.name_ar || row.country_code,
+          name_en: pm?.name_en || row.country_code,
+          country_code: row.country_code,
+          currency_code: row.currency_code,
+          enabled: row.enabled,
+          min_amount: row.min_amount,
+          max_amount: row.max_amount,
+          percentage_fee: Number(row.percentage_fee || 0),
+          flat_fee: Number(row.flat_fee || 0),
+          settlement_time_text_ar: row.settlement_time_text_ar,
+          settlement_time_text_en: row.settlement_time_text_en,
+          requires_proof: row.requires_proof,
+          requires_redirect: row.requires_redirect,
+          provider_approval_status: row.provider_approval_status,
+          sort_order: row.sort_order,
+        };
+      });
     }
   }
   if (!paymentMethods.length) {
@@ -139,6 +181,22 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
           </div>
         </section>
 
+        <CountryPaymentPanel locale={locale} countries={countries} matrixRows={matrixRows} />
+
+        <section id="secure-quote" className="sectionBlock">
+          <div className="shell">
+            <div className="sectionTitle">
+              <span>Gulf Gate Secure Quote Link</span>
+              <h2>{ar ? "رابط طلب ودفع مخصص بمبلغ محدد" : "A secure quote link with a fixed amount"}</h2>
+              <p>
+                {ar
+                  ? "ينشئ الموظف رابطاً آمناً بمدة صلاحية وتثبيت سعر. لا تُوضع المبالغ أو بيانات العميل داخل عنوان الرابط."
+                  : "Staff create a time-limited secure link with a locked rate. Amounts and customer PII are never placed in the URL."}
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section id="platform" className="sectionBlock">
           <div className="shell">
             <div className="sectionTitle">
@@ -196,9 +254,13 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
         <section id="payments" className="sectionBlock darkPanel">
           <div className="shell securityGrid">
             <div>
-              <span className="sectionKicker">{ar ? "طرق الدفع" : "Payment methods"}</span>
-              <h2>{ar ? "طرق الدفع المخطط دعمها" : "Planned payment methods"}</h2>
-              <p>{ar ? "نعرض الطرق النشطة للإعداد والتجربة فقط. لا تُطلب تحويلات حقيقية في هذه المرحلة." : "Active methods are shown for setup and testing only. Real transfers are not requested at this stage."}</p>
+              <span className="sectionKicker">{ar ? "وسائل الدفع حسب الدولة" : "Payment methods by country"}</span>
+              <h2>{ar ? "المصفوفة تُدار من لوحة الإدارة" : "Matrix managed from the admin panel"}</h2>
+              <p>
+                {ar
+                  ? "لا تُكتب الوسائل بشكل ثابت في الواجهة. العراق: زين كاش أولاً. الإمارات: e& money وdu Pay يدوياً. Stripe يظهر فقط بعد الموافقة الرسمية على نشاط الأصول الرقمية."
+                  : "Methods are not hard-coded in JSX. Iraq: Zain Cash first. UAE: e& money and du Pay in manual mode. Stripe appears only after official crypto business approval."}
+              </p>
             </div>
             <div className="chipGrid">
               {paymentMethods.map((method) => <span className="infoChip" key={method.code}><CreditCard size={16} />{method.name}</span>)}

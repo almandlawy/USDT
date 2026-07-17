@@ -13,6 +13,9 @@ export type AdminSection =
   | "p2p"
   | "proofs"
   | "payment-methods"
+  | "countries"
+  | "quote-links"
+  | "readiness"
   | "rates"
   | "fees"
   | "limits"
@@ -46,6 +49,9 @@ export const ADMIN_SECTION_ROLES: Record<AdminSection, StaffRole[]> = {
   p2p: ["super_admin", "operations", "compliance", "finance", "reviewer"],
   proofs: ["super_admin", "operations", "finance", "reviewer"],
   "payment-methods": ["super_admin", "finance"],
+  countries: ["super_admin", "finance", "compliance"],
+  "quote-links": ["super_admin", "operations", "finance"],
+  readiness: ["super_admin", "compliance", "finance"],
   rates: ["super_admin", "finance"],
   fees: ["super_admin", "finance"],
   limits: ["super_admin", "finance", "compliance"],
