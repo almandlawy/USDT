@@ -1,0 +1,79 @@
+/* Component refinements layered after luxury-theme.css */
+
+.prelaunchBanner.operational {
+  color: #285b43;
+  background: #e3eee6;
+  border-color: rgba(49, 107, 80, .22);
+}
+.prelaunchBanner.operational strong {
+  color: #214d39;
+  border-color: rgba(49, 107, 80, .28);
+}
+.exchangeBadge.operational {
+  color: #285b43;
+  background: #e2eee5;
+}
+
+.authVisualCopy {
+  position: relative;
+  z-index: 2;
+  max-width: 650px;
+}
+.authFeatureGrid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.authFeatureGrid article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(225, 196, 127, .16);
+  background: rgba(255,255,255,.032);
+}
+.authFeatureGrid svg { color: #dfc27f; }
+.authFeatureGrid span { display: grid; gap: 3px; }
+.authFeatureGrid b { color: #fff8eb; font-size: 12px; }
+.authFeatureGrid small { color: #aaa296; font-size: 9px; line-height: 1.45; }
+.authVisualSeal {
+  position: absolute;
+  inset-inline-end: 50px;
+  bottom: 42px;
+  width: 132px;
+  height: 178px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(225, 196, 127, .18);
+  border-radius: 70px 70px 5px 5px;
+  box-shadow: 0 0 0 18px rgba(225, 196, 127, .04);
+}
+.authVisualSeal span {
+  color: rgba(225, 196, 127, .28);
+  font: 500 34px Georgia, serif;
+  letter-spacing: -.08em;
+}
+
+.brandCompact .brandLogo { width: 42px; height: 42px; }
+.sidebarBrand .brandMark { width: 190px; }
+.authVisual .brandMark { width: min(250px, 62vw); }
+.authMobileLogo .brandMark { width: min(230px, 72vw); }
+.footerBrandBlock .brandMark { width: 230px; }
+
+.formNotice {
+  color: #6f685e;
+  background: #f3ecdf;
+  border-color: rgba(143, 109, 45, .18);
+}
+
+@media (max-width: 1100px) {
+  .authFeatureGrid { grid-template-columns: 1fr; }
+  .authVisualSeal { opacity: .55; }
+}
+
+@media (max-width: 720px) {
+  .authFeatureGrid { display: none; }
+}
