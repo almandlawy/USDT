@@ -201,3 +201,20 @@ describe("migration 013/014 multi-country payments", () => {
     expect(payments).not.toMatch(/auto_fulfillment',\s*true/i);
   });
 });
+
+describe("migration 015 Iraq/UAE routing correction", () => {
+  const correction = readFileSync(
+    resolve(process.cwd(), "supabase/migrations/202607150015_iraq_uae_payment_routing_correction.sql"),
+    "utf8",
+  );
+  it("disables Stripe for Iraq and seeds FIB/SuperQi/Zain/bank", () => {
+    expect(correction).toContain("country_code = 'IQ'");
+    expect(correction).toContain("'stripe_card'");
+    expect(correction).toContain("('fib'");
+    expect(correction).toContain("('superqi'");
+    expect(correction).toContain("signed_payment_instructions");
+    expect(correction).toContain("country_payment_accounts");
+    expect(correction).toContain("country_payment_methods_public");
+    expect(correction).toContain("Never expose via public API");
+  });
+});

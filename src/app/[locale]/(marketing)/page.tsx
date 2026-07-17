@@ -18,8 +18,16 @@ import { getDictionary, isLocale } from "@/lib/i18n/dictionaries";
 import { getMarketSnapshot } from "@/lib/market-data";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
-import { COUNTRY_SEED } from "@/lib/countries/catalog";
+import { COUNTRY_SEED, primaryCountries } from "@/lib/countries/catalog";
 import type { MatrixMethodRow } from "@/lib/payments/matrix";
+import {
+  companyBrandName,
+  companyLegalName,
+  companyPublicAddress,
+  companyReference,
+  companyReferencePublicLabel,
+  varaPublicDisclosure,
+} from "@/lib/company/legal";
 
 function contactValue(key: string) {
   const value = process.env[key]?.trim();
@@ -39,7 +47,7 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
 
   let paymentMethods: { name: string; code: string }[] = [];
   let matrixRows: MatrixMethodRow[] = [];
-  let countries = COUNTRY_SEED;
+  let countries = primaryCountries(COUNTRY_SEED);
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -55,7 +63,7 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
       .select("code,name_ar,name_en,currency_code,dialing_code,enabled,kyc_required,risk_level,sanctions_blocked,payment_region,kyc_jurisdiction,sort_order")
       .order("sort_order");
     if (countryRows?.length) {
-      countries = countryRows as typeof COUNTRY_SEED;
+      countries = primaryCountries(countryRows as typeof COUNTRY_SEED);
     }
     const { data: availability } = await supabase
       .from("payment_method_availability")
@@ -99,12 +107,14 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
     ];
   }
 
-  const company = contactValue("NEXT_PUBLIC_COMPANY_NAME");
   const supportEmail = contactValue("NEXT_PUBLIC_SUPPORT_EMAIL");
   const whatsapp = contactValue("NEXT_PUBLIC_WHATSAPP_NUMBER");
-  const address = contactValue("NEXT_PUBLIC_COMPANY_ADDRESS");
   const hours = contactValue("NEXT_PUBLIC_WORKING_HOURS");
-  const license = contactValue("NEXT_PUBLIC_TRADE_LICENSE_NUMBER");
+  const brand = companyBrandName();
+  const legalName = companyLegalName();
+  const publicAddress = companyPublicAddress();
+  const companyRef = companyReference();
+  const vara = varaPublicDisclosure();
 
   const steps = ar
     ? [
@@ -258,8 +268,8 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
               <h2>{ar ? "المصفوفة تُدار من لوحة الإدارة" : "Matrix managed from the admin panel"}</h2>
               <p>
                 {ar
-                  ? "لا تُكتب الوسائل بشكل ثابت في الواجهة. العراق: زين كاش أولاً. الإمارات: e& money وdu Pay يدوياً. Stripe يظهر فقط بعد الموافقة الرسمية على نشاط الأصول الرقمية."
-                  : "Methods are not hard-coded in JSX. Iraq: Zain Cash first. UAE: e& money and du Pay in manual mode. Stripe appears only after official crypto business approval."}
+                  ? "لا تُكتب الوسائل بشكل ثابت في الواجهة. العراق: FIB وSuperQi وزين كاش وتحويل بنكي — بلا Stripe. الإمارات: Stripe وe& money وdu Pay وتحويل بنكي وفق الموافقات. التفاصيل تظهر بعد إنشاء الطلب فقط."
+                  : "Methods are not hard-coded in JSX. Iraq: FIB, SuperQi, Zain Cash, bank transfer — no Stripe. UAE: Stripe, e& money, du Pay, bank transfer per approvals. Details appear only after order creation."}
               </p>
             </div>
             <div className="chipGrid">
@@ -361,13 +371,28 @@ export default async function MarketingPage({ params }: { params: Promise<{ loca
               <h2>{ar ? "قنوات واضحة عند توفرها" : "Clear channels when configured"}</h2>
             </div>
             <div className="contactGrid">
-              {company && <article><Building2 /><span>{ar ? "الاسم القانوني" : "Legal name"}</span><strong>{company}</strong></article>}
+              {brand && <article><Building2 /><span>{ar ? "العلامة" : "Brand"}</span><strong>{brand}</strong></article>}
+              {legalName && <article><Building2 /><span>{ar ? "الاسم القانوني" : "Legal name"}</span><strong>{legalName}</strong></article>}
+              {companyRef && (
+                <article>
+                  <Building2 />
+                  <span>{companyReferencePublicLabel(locale)}</span>
+                  <strong>{companyRef}</strong>
+                </article>
+              )}
               {supportEmail && <article><Mail /><span>{ar ? "بريد الدعم" : "Support email"}</span><a href={`mailto:${supportEmail}`}>{supportEmail}</a></article>}
               {whatsapp && <article><Phone /><span>WhatsApp</span><a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`} rel="noreferrer" target="_blank">{whatsapp}</a></article>}
               {hours && <article><LifeBuoy /><span>{ar ? "ساعات العمل" : "Working hours"}</span><strong>{hours}</strong></article>}
-              {address && <article><Building2 /><span>{ar ? "العنوان" : "Address"}</span><strong>{address}</strong></article>}
-              {license && <article><BadgeCheck /><span>{ar ? "رقم الرخصة" : "Trade licence"}</span><strong>{license}</strong></article>}
-              {!company && !supportEmail && !whatsapp && !hours && !address && !license && (
+              {publicAddress && <article><Building2 /><span>{ar ? "العنوان القانوني" : "Legal address"}</span><strong>{publicAddress}</strong></article>}
+              {vara.show && vara.licenseNumber && (
+                <article>
+                  <BadgeCheck />
+                  <span>{ar ? "ترخيص VARA (موثّق)" : "VARA licence (verified)"}</span>
+                  <strong>{vara.licenseNumber}</strong>
+                  <small>{vara.licenseType} · {vara.status}</small>
+                </article>
+              )}
+              {!brand && !supportEmail && !whatsapp && !hours && !publicAddress && !companyRef && (
                 <p className="formNotice">{ar ? "بيانات التواصل تُعرض هنا بعد إعدادها في بيئة التشغيل." : "Contact details appear here once configured in the environment."}</p>
               )}
             </div>

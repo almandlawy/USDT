@@ -188,7 +188,7 @@ function PaymentMethodForm({locale}:{locale:"ar"|"en"}){const ar=locale==="ar";r
 
 function QuoteLinkGenerator({locale}:{locale:"ar"|"en"}){
   const ar=locale==="ar";
-  return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>SECURE QUOTE LINK</span><h2>{ar?"إنشاء رابط عرض آمن":"Create secure quote link"}</h2></div></div>
+  return <section className="panel adminFormPanel"><div className="panelHeading"><div><span>SECURE QUOTE LINK</span><h2>{ar?"إنشاء رابط شراء":"Create purchase link"}</h2></div></div>
     <form action={createQuoteLinkAction} className="formGrid">
       <input type="hidden" name="locale" value={locale}/>
       <label><span>{ar?"اسم العميل":"Customer name"}</span><input name="customerName"/></label>
@@ -213,7 +213,7 @@ function QuoteLinkGenerator({locale}:{locale:"ar"|"en"}){
       <label className="checkLine"><input type="checkbox" name="kycRequired"/>{ar?"يتطلب KYC":"KYC required"}</label>
       <label className="fullField"><span>{ar?"وسائل الدفع المسموحة (مفصولة بفاصلة)":"Allowed methods (comma-separated)"}</span><input name="allowedMethods" placeholder="zain_cash,bank_transfer,manual_proof"/></label>
       <label className="fullField"><span>{ar?"ملاحظات داخلية":"Internal notes"}</span><textarea name="notes" rows={3}/></label>
-      <button className="primaryButton" type="submit"><Save/>{ar?"إنشاء الرابط":"Create link"}</button>
+      <button className="primaryButton" type="submit"><Save/>{ar?"إنشاء رابط شراء":"Create purchase link"}</button>
     </form>
   </section>;
 }

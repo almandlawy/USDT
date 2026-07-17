@@ -781,3 +781,18 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: #159fbb; }
   .countryPaymentSection .countryPaymentGrid,
   .quoteFacts { grid-template-columns: 1fr; }
 }
+
+.methodLogoBadge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 1.75rem;
+  padding: 0 .45rem;
+  border-radius: 8px;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: #071426;
+  background: linear-gradient(135deg, #E1BD69, #C9A24D);
+}
+.paymentMethodNamesOnly .methodHint { font-size: .85rem; }

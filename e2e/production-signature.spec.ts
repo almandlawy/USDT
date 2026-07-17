@@ -99,7 +99,9 @@ test.describe("production revision signature", () => {
     await page.goto("/ar");
     await expect(page.locator('.brand img, .brandMark, img[alt*="Gulf Gate"]').first()).toBeVisible();
     const body = await page.locator("body").innerText();
-    expect(body).toMatch(/إدارة طلبات USDT|Manage USDT requests/);
+    expect(body).toMatch(/اشترِ USDT|Buy USDT|اختر دولة الدفع|Choose payment country/);
     expect(body).not.toMatch(/FEE_BPS|3,?500\s*IQD/);
+    expect(body).not.toMatch(/VARA Licence Number|Trade Licence Number/);
+    expect(body).toMatch(/FIB|SuperQi|Zain Cash/);
   });
 });

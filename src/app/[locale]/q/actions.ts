@@ -1,10 +1,12 @@
 "use server";
 
-import { hashQuoteToken, generatePaymentReference } from "@/lib/quote-links/token";
+import { hashQuoteToken, generateCountryPaymentReference } from "@/lib/quote-links/token";
 import { validateWalletAddress, walletsMatch } from "@/lib/wallet/validate";
+import { assertMethodAllowedForCountry } from "@/lib/payments/matrix";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
+import { primaryCurrencyForCountry } from "@/lib/countries/catalog";
 
 export async function acceptQuoteLinkAction(
   locale: string,
@@ -62,6 +64,18 @@ export async function acceptQuoteLinkAction(
   if (quote.allowed_payment_methods?.length && !quote.allowed_payment_methods.includes(paymentMethodCode)) {
     return { error: ar ? "وسيلة الدفع غير مسموحة لهذا الرابط." : "Payment method not allowed for this link." };
   }
+  if (!assertMethodAllowedForCountry(quote.country_code, paymentMethodCode)) {
+    return { error: ar ? "وسيلة الدفع غير مسموحة لهذه الدولة." : "Payment method not allowed for this country." };
+  }
+  if (quote.country_code === "IQ" && paymentMethodCode === "stripe_card") {
+    return { error: ar ? "Stripe غير متاح للعراق." : "Stripe is not available for Iraq." };
+  }
+
+  // Server is source of truth for currency
+  const expectedCurrency = primaryCurrencyForCountry(quote.country_code);
+  if (quote.fiat_currency !== expectedCurrency && quote.country_code !== "OTHER") {
+    return { error: ar ? "عملة العرض غير متوافقة مع الدولة." : "Quote currency does not match country." };
+  }
 
   let wallet = "";
   if (quote.wallet_mode === "customer_entered") {
@@ -79,7 +93,7 @@ export async function acceptQuoteLinkAction(
     wallet = String(quote.fixed_wallet_address_encrypted);
   }
 
-  const paymentReference = generatePaymentReference();
+  const paymentReference = generateCountryPaymentReference(quote.country_code);
   const supabase = await createClient();
   const {
     data: { user },

@@ -28,8 +28,14 @@ describe("quote link tokens", () => {
     expect(verifyQuoteTokenSignature(token, sig, "wrong-secret-at-least-32-characters!")).toBe(false);
   });
 
-  it("builds GG-YEAR payment references", () => {
+  it("builds GG-YEAR and country-scoped payment references", () => {
     expect(generatePaymentReference(2026)).toMatch(/^GG-2026-[0-9A-F]{6}$/);
+  });
+
+  it("builds GG-IQ and GG-AE references", async () => {
+    const { generateCountryPaymentReference } = await import("@/lib/quote-links/token");
+    expect(generateCountryPaymentReference("IQ", 2026)).toMatch(/^GG-IQ-2026-[0-9A-F]{6}$/);
+    expect(generateCountryPaymentReference("AE", 2026)).toMatch(/^GG-AE-2026-[0-9A-F]{6}$/);
   });
 });
 

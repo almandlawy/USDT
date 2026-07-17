@@ -36,6 +36,19 @@ export function generatePaymentReference(year = new Date().getUTCFullYear()): st
   return `GG-${year}-${suffix}`;
 }
 
+/** Country-scoped payment reference: GG-IQ-2026-XXXXXX / GG-AE-2026-XXXXXX */
+export function generateCountryPaymentReference(
+  countryCode: string,
+  year = new Date().getUTCFullYear(),
+): string {
+  const region =
+    countryCode === "IQ" ? "IQ" :
+    countryCode === "AE" ? "AE" :
+    "INT";
+  const suffix = randomBytes(3).toString("hex").toUpperCase();
+  return `GG-${region}-${year}-${suffix}`;
+}
+
 export function hashPayload(payload: string): string {
   return createHash("sha256").update(payload).digest("hex");
 }

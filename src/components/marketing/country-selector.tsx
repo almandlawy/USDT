@@ -32,7 +32,7 @@ export function CountrySelector({
   return (
     <div className="countrySelector">
       <label className="countrySelectorLabel" htmlFor="country-search">
-        {ar ? "من أي دولة تريد الشراء؟" : "Which country do you want to buy from?"}
+        {ar ? "اختر دولة الدفع" : "Choose payment country"}
       </label>
       {suggestedCode ? (
         <p className="countrySuggest">

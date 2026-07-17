@@ -138,7 +138,16 @@ export default async function QuoteLinkPage({
         ) : (
           <section className="quoteLinkContent">
             <h1>{ar ? "عرض سعر آمن" : "Secure quote"}</h1>
+            <p className="methodHint">
+              {ar
+                ? "تعليمات الدفع تظهر فقط بعد قبول العرض وإنشاء الطلب. لا تُعرض أرقام حسابات أو بيانات الشركة الإماراتية لعملاء العراق هنا."
+                : "Payment instructions appear only after accepting the quote and creating the order. Iraq customers do not see UAE company or account details here."}
+            </p>
             <dl className="quoteFacts">
+              <div>
+                <dt>{ar ? "الدولة" : "Country"}</dt>
+                <dd>{quote.country_code}</dd>
+              </div>
               <div>
                 <dt>{ar ? "المبلغ" : "Amount"}</dt>
                 <dd>

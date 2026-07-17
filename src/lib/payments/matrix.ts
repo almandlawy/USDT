@@ -1,9 +1,6 @@
 import {
   canUseStripeCheckout,
   canUseZainCashCheckout,
-  isBankTransferEnabled,
-  isDuPayEnabled,
-  isEandMoneyEnabled,
   stripeAvailabilityMessage,
 } from "@/lib/payments/flags";
 
@@ -38,7 +35,7 @@ export interface MatrixMethodRow {
   requires_redirect: boolean;
   provider_approval_status: string;
   sort_order: number;
-  integration_mode?: string;
+  integration_mode?: "api" | "manual" | "disabled";
 }
 
 export interface ResolvedPaymentMethod extends MatrixMethodRow {
@@ -47,107 +44,130 @@ export interface ResolvedPaymentMethod extends MatrixMethodRow {
   displayMode: "active" | "disabled" | "hidden";
 }
 
+/** Public catalog fields only — never account numbers / IBAN / merchant IDs. */
+export interface PublicMethodDisplay {
+  code: PaymentMethodCode;
+  name_ar: string;
+  name_en: string;
+  currency_code: string;
+  available: boolean;
+  disabledReason?: { ar: string; en: string };
+}
+
+const IRAQ_CODES: PaymentMethodCode[] = ["fib", "superqi", "zain_cash", "bank_transfer"];
+const UAE_CODES: PaymentMethodCode[] = ["stripe_card", "eand_money", "dupay", "bank_transfer"];
+const WORLD_CODES: PaymentMethodCode[] = ["stripe_card", "bank_transfer"];
+
+export function allowedMethodCodesForCountry(countryCode: string): PaymentMethodCode[] {
+  if (countryCode === "IQ") return [...IRAQ_CODES];
+  if (countryCode === "AE") return [...UAE_CODES];
+  return [...WORLD_CODES];
+}
+
 /**
  * Resolve country payment methods with runtime provider gates.
- * Stripe is hidden/disabled unless crypto-approved + enabled + real payments.
- * Manual UAE wallets require enable flags and never claim automatic confirmation.
+ * Iraq: never Stripe. Names only for customer chooser — secrets stay server-side.
  */
 export function resolvePaymentMethodsForCountry(
   rows: MatrixMethodRow[],
   countryCode: string,
 ): ResolvedPaymentMethod[] {
+  const allowed = new Set(allowedMethodCodesForCountry(countryCode));
   const filtered = rows
-    .filter((row) => row.country_code === countryCode)
+    .filter((row) => row.country_code === countryCode && allowed.has(row.code))
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  return filtered.map((row) => {
-    if (!row.enabled) {
-      return { ...row, available: false, displayMode: "hidden" as const };
-    }
-
-    if (row.code === "stripe_card") {
-      if (canUseStripeCheckout() && row.provider_approval_status === "approved") {
-        return { ...row, available: true, displayMode: "active" as const };
+  return filtered
+    .map((row) => {
+      if (!row.enabled) {
+        return { ...row, available: false, displayMode: "hidden" as const };
       }
-      return {
-        ...row,
-        available: false,
-        displayMode: "disabled" as const,
-        disabledReason: {
-          ar: stripeAvailabilityMessage("ar"),
-          en: stripeAvailabilityMessage("en"),
-        },
-      };
-    }
 
-    if (row.code === "zain_cash") {
-      if (canUseZainCashCheckout()) {
-        return { ...row, available: true, displayMode: "active" as const };
+      // Iraq: Stripe must never appear
+      if (countryCode === "IQ" && row.code === "stripe_card") {
+        return { ...row, available: false, displayMode: "hidden" as const };
       }
-      // Show as available for intake/manual path when matrix enabled but gateway off —
-      // customer still uploads proof / waits for activation messaging.
-      return {
-        ...row,
-        available: true,
-        displayMode: "active" as const,
-        requires_proof: true,
-        requires_redirect: false,
-        disabledReason: {
-          ar: "زين كاش جاهز لاستقبال الطلب؛ التحويل التلقائي عبر البوابة يُفعّل بعد الاعتماد وبيانات الإنتاج.",
-          en: "Zain Cash accepts the request; live gateway redirect activates after approval and production credentials.",
-        },
-      };
-    }
 
-    if (row.code === "eand_money") {
-      return {
-        ...row,
-        available: true,
-        displayMode: "active" as const,
-        requires_proof: true,
-        requires_redirect: false,
-        disabledReason: isEandMoneyEnabled()
-          ? undefined
-          : {
-              ar: "وضع يدوي — يظهر رقم/QR فقط بعد إعداد الإدارة.",
-              en: "Manual mode — phone/QR appear only after admin configuration.",
+      if (row.code === "stripe_card") {
+        if (countryCode !== "AE" && countryCode !== "OTHER" && countryCode !== "US" && countryCode !== "GB" && countryCode !== "EU") {
+          // Only show Stripe for UAE + rest-of-world approved routing
+          if (countryCode !== "AE" && !WORLD_CODES.includes("stripe_card")) {
+            return { ...row, available: false, displayMode: "hidden" as const };
+          }
+        }
+        if (canUseStripeCheckout()) {
+          return { ...row, available: true, displayMode: "active" as const, requires_proof: false, requires_redirect: true };
+        }
+        // UAE: show disabled with message; never reveal secrets
+        if (countryCode === "AE" || countryCode === "OTHER") {
+          return {
+            ...row,
+            available: false,
+            displayMode: "disabled" as const,
+            disabledReason: {
+              ar: stripeAvailabilityMessage("ar"),
+              en: stripeAvailabilityMessage("en"),
             },
-      };
-    }
-
-    if (row.code === "dupay") {
-      return {
-        ...row,
-        available: true,
-        displayMode: "active" as const,
-        requires_proof: true,
-        requires_redirect: false,
-        disabledReason: isDuPayEnabled()
-          ? undefined
-          : {
-              ar: "وضع يدوي — بدون ادعاء شراكة أو تكامل تلقائي.",
-              en: "Manual mode — no partnership claim or automatic integration.",
-            },
-      };
-    }
-
-    if (row.code === "bank_transfer") {
-      if (!isBankTransferEnabled()) {
-        // Still show when matrix says enabled — bank details revealed after order.
-        return { ...row, available: true, displayMode: "active" as const };
+          };
+        }
+        return { ...row, available: false, displayMode: "hidden" as const };
       }
+
+      if (row.code === "zain_cash") {
+        const api = canUseZainCashCheckout();
+        return {
+          ...row,
+          available: true,
+          displayMode: "active" as const,
+          requires_proof: !api,
+          requires_redirect: api,
+          integration_mode: (api ? "api" : "manual") as "api" | "manual",
+        };
+      }
+
+      if (row.code === "eand_money") {
+        return {
+          ...row,
+          available: true,
+          displayMode: "active" as const,
+          requires_proof: true,
+          requires_redirect: false,
+          integration_mode: "manual" as const,
+        };
+      }
+
+      if (row.code === "dupay") {
+        return {
+          ...row,
+          available: true,
+          displayMode: "active" as const,
+          requires_proof: true,
+          requires_redirect: false,
+          integration_mode: "manual" as const,
+        };
+      }
+
       return { ...row, available: true, displayMode: "active" as const };
-    }
+    })
+    .filter((row) => row.displayMode !== "hidden");
+}
 
-    return { ...row, available: true, displayMode: "active" as const };
-  }).filter((row) => row.displayMode !== "hidden");
+/** Strip all settlement/account hints for pre-order chooser UI. */
+export function toPublicMethodDisplays(methods: ResolvedPaymentMethod[]): PublicMethodDisplay[] {
+  return methods.map((m) => ({
+    code: m.code,
+    name_ar: m.name_ar,
+    name_en: m.name_en,
+    currency_code: m.currency_code,
+    available: m.available,
+    disabledReason: m.disabledReason,
+  }));
 }
 
 export function methodLabel(row: Pick<MatrixMethodRow, "name_ar" | "name_en">, locale: "ar" | "en"): string {
   return locale === "ar" ? row.name_ar : row.name_en;
 }
 
-/** Fallback matrix when DB is unavailable — mirrors migration seed (intake-safe, Stripe gated). */
 export function fallbackMatrixForCountry(countryCode: string): MatrixMethodRow[] {
   const base = (partial: Omit<MatrixMethodRow, "id" | "payment_method_id"> & { code: PaymentMethodCode }): MatrixMethodRow => ({
     id: `${partial.country_code}-${partial.code}-${partial.currency_code}`,
@@ -157,35 +177,29 @@ export function fallbackMatrixForCountry(countryCode: string): MatrixMethodRow[]
 
   if (countryCode === "IQ") {
     return [
-      base({ code: "zain_cash", name_ar: "زين كاش", name_en: "Zain Cash", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 10000, max_amount: 50000000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "بعد تفعيل البوابة أو مراجعة الإثبات", settlement_time_text_en: "After gateway activation or proof review", requires_proof: true, requires_redirect: false, provider_approval_status: "pending", sort_order: 10 }),
-      base({ code: "stripe_card", name_ar: "بطاقة Stripe", name_en: "Stripe Card", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 5, max_amount: 100000, percentage_fee: 2.9, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: false, requires_redirect: true, provider_approval_status: "pending", sort_order: 20 }),
-      base({ code: "bank_transfer", name_ar: "تحويل بنكي", name_en: "Bank Transfer", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 50000, max_amount: 100000000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "مراجعة بشرية", settlement_time_text_en: "Human review", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 30 }),
-      base({ code: "manual_proof", name_ar: "إثبات يدوي", name_en: "Manual proof", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 10000, max_amount: 100000000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "مراجعة بشرية", settlement_time_text_en: "Human review", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 40 }),
+      base({ code: "fib", name_ar: "FIB", name_en: "FIB", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 10000, max_amount: 50000000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 10, integration_mode: "manual" }),
+      base({ code: "superqi", name_ar: "SuperQi", name_en: "SuperQi", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 10000, max_amount: 50000000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 20, integration_mode: "manual" }),
+      base({ code: "zain_cash", name_ar: "زين كاش", name_en: "Zain Cash", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 10000, max_amount: 50000000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 30, integration_mode: "manual" }),
+      base({ code: "bank_transfer", name_ar: "تحويل بنكي", name_en: "Bank Transfer", country_code: "IQ", currency_code: "IQD", enabled: true, min_amount: 50000, max_amount: 100000000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 40, integration_mode: "manual" }),
     ];
   }
 
   if (countryCode === "AE") {
     return [
-      base({ code: "stripe_card", name_ar: "بطاقة Stripe", name_en: "Stripe Card", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 10, max_amount: 200000, percentage_fee: 2.9, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: false, requires_redirect: true, provider_approval_status: "pending", sort_order: 10 }),
-      base({ code: "eand_money", name_ar: "e& money (يدوي)", name_en: "e& money (manual)", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 50, max_amount: 50000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "يدوي", settlement_time_text_en: "Manual", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 20 }),
-      base({ code: "dupay", name_ar: "du Pay (يدوي)", name_en: "du Pay (manual)", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 50, max_amount: 50000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "يدوي", settlement_time_text_en: "Manual", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 30 }),
-      base({ code: "bank_transfer", name_ar: "تحويل بنكي", name_en: "Bank Transfer", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 100, max_amount: 500000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "مراجعة بشرية", settlement_time_text_en: "Human review", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 40 }),
-      base({ code: "manual_proof", name_ar: "إثبات يدوي", name_en: "Manual proof", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 50, max_amount: 500000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "مراجعة بشرية", settlement_time_text_en: "Human review", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 50 }),
+      base({ code: "stripe_card", name_ar: "Stripe", name_en: "Stripe", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 10, max_amount: 200000, percentage_fee: 2.9, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: false, requires_redirect: true, provider_approval_status: "pending", sort_order: 10, integration_mode: "disabled" }),
+      base({ code: "eand_money", name_ar: "e& money", name_en: "e& money", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 50, max_amount: 50000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 20, integration_mode: "manual" }),
+      base({ code: "dupay", name_ar: "du Pay", name_en: "du Pay", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 50, max_amount: 50000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 30, integration_mode: "manual" }),
+      base({ code: "bank_transfer", name_ar: "تحويل بنكي", name_en: "Bank Transfer", country_code: "AE", currency_code: "AED", enabled: true, min_amount: 100, max_amount: 500000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 40, integration_mode: "manual" }),
     ];
   }
 
-  const currency =
-    countryCode === "SA" ? "SAR" :
-    countryCode === "QA" ? "QAR" :
-    countryCode === "KW" ? "KWD" :
-    countryCode === "BH" ? "BHD" :
-    countryCode === "OM" ? "OMR" :
-    countryCode === "GB" ? "GBP" :
-    countryCode === "EU" ? "EUR" : "USD";
-
+  // Rest of world
   return [
-    base({ code: "stripe_card", name_ar: "بطاقة Stripe", name_en: "Stripe Card", country_code: countryCode, currency_code: currency, enabled: true, min_amount: 10, max_amount: 50000, percentage_fee: 2.9, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: false, requires_redirect: true, provider_approval_status: "pending", sort_order: 10 }),
-    base({ code: "bank_transfer", name_ar: "تحويل بنكي", name_en: "Bank Transfer", country_code: countryCode, currency_code: currency, enabled: true, min_amount: 50, max_amount: 250000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "مراجعة بشرية", settlement_time_text_en: "Human review", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 20 }),
-    base({ code: "manual_proof", name_ar: "إثبات يدوي", name_en: "Manual proof", country_code: countryCode, currency_code: currency, enabled: true, min_amount: 25, max_amount: 250000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: "مراجعة بشرية", settlement_time_text_en: "Human review", requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 30 }),
+    base({ code: "stripe_card", name_ar: "Stripe", name_en: "Stripe", country_code: "OTHER", currency_code: "USD", enabled: true, min_amount: 10, max_amount: 50000, percentage_fee: 2.9, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: false, requires_redirect: true, provider_approval_status: "pending", sort_order: 10, integration_mode: "disabled" }),
+    base({ code: "bank_transfer", name_ar: "تحويل بنكي دولي", name_en: "International Bank Transfer", country_code: "OTHER", currency_code: "USD", enabled: true, min_amount: 50, max_amount: 250000, percentage_fee: 0, flat_fee: 0, settlement_time_text_ar: null, settlement_time_text_en: null, requires_proof: true, requires_redirect: false, provider_approval_status: "not_required", sort_order: 20, integration_mode: "manual" }),
   ];
+}
+
+export function assertMethodAllowedForCountry(countryCode: string, methodCode: string): boolean {
+  return allowedMethodCodesForCountry(countryCode).includes(methodCode as PaymentMethodCode);
 }
