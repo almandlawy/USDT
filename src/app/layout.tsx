@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Manrope } from "next/font/google";
 import { getSiteOrigin, SITE_NAME } from "@/lib/site";
 import "./globals.css";
+import "./luxury-theme.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(getSiteOrigin()),
   applicationName: SITE_NAME,
   title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
-  description: "A bilingual pre-launch platform for managed digital-asset requests.",
+  description: "A bilingual platform for managed digital-asset requests.",
   robots: { index: true, follow: true },
   icons: {
     icon: [
@@ -39,8 +40,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  colorScheme: "dark",
-  themeColor: "#071426",
+  colorScheme: "light",
+  themeColor: "#F7F5EF",
 };
 
 export default async function RootLayout({
