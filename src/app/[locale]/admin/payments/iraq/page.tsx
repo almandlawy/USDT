@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CircleAlert, LockKeyhole, Save, ShieldCheck } from "lucide-react";
 import { canAccessAdminSection } from "@/lib/admin-permissions";
@@ -27,6 +28,25 @@ type AccountRow = {
   instructions_en: string | null;
   account_payload_encrypted: string | null;
 };
+
+function errorMessage(code: string | undefined, ar: boolean) {
+  switch (code) {
+    case "configuration":
+      return ar ? "إعداد Supabase غير مكتمل." : "Supabase configuration is incomplete.";
+    case "missing_payment_details":
+      return ar ? "لا يمكن تفعيل الوسيلة قبل إضافة بيانات دفع مشفرة أو QR." : "Add encrypted payment details or a QR asset before enabling this method.";
+    case "api_not_implemented":
+      return ar ? "وضع API غير منفذ لهذه الوسيلة. FIB وSuperQi والتحويل البنكي تعمل يدوياً حالياً." : "API mode is not implemented for this method. FIB, SuperQi, and bank transfer are manual routes.";
+    case "zaincash_not_ready":
+      return ar ? "ربط زين كاش غير جاهز: فعّل بوابة الدفع الحقيقي وأضف بيانات الإنتاج والـWebhook أولاً." : "Zain Cash is not ready: enable real payments and configure production credentials and webhook first.";
+    case "account_not_found":
+      return ar ? "حساب الدفع غير موجود." : "Payment account was not found.";
+    case "save_failed":
+      return ar ? "تعذر حفظ حساب الدفع. راجع الإعدادات والحدود." : "Could not save the payment account. Review its configuration and limits.";
+    default:
+      return code || (ar ? "حدث خطأ." : "Something went wrong.");
+  }
+}
 
 export default async function IraqPaymentsAdminPage({
   params,
@@ -72,9 +92,14 @@ export default async function IraqPaymentsAdminPage({
           <h1>{ar ? "حسابات الدفع العراقية" : "Iraq payment accounts"}</h1>
           <p>
             {ar
-              ? "FIB وSuperQi وزين كاش والتحويل البنكي العراقي. التفاصيل مشفرة ولا تُعرض عبر Public API."
-              : "FIB, SuperQi, Zain Cash, and Iraqi bank transfer. Details are encrypted and never exposed via public API."}
+              ? "FIB وSuperQi والتحويل البنكي تعمل يدوياً. زين كاش يمكن أن يكون يدوياً أو API بعد اكتمال بيانات الإنتاج."
+              : "FIB, SuperQi, and bank transfer are manual routes. Zain Cash can be manual or API after production setup is complete."}
           </p>
+          <div className="heroActions">
+            <Link className="secondaryButton small" href={`/${locale}/admin/payments/uae`}>
+              {ar ? "إدارة مدفوعات الإمارات" : "Manage UAE payments"}
+            </Link>
+          </div>
         </div>
         <span className="statusBadge" data-tone="warning">
           <LockKeyhole size={14} /> Super Admin / Finance
@@ -84,7 +109,7 @@ export default async function IraqPaymentsAdminPage({
       {(query.error || loadError) && (
         <div className="formAlert">
           <CircleAlert />
-          {query.error || loadError}
+          {errorMessage(query.error || loadError, ar)}
         </div>
       )}
       {query.saved && (
@@ -107,11 +132,10 @@ export default async function IraqPaymentsAdminPage({
             : "Not published in footer/legal pages until COMPANY_LEGAL_DETAILS_VERIFIED=true."}
         </p>
         <p>
-          <strong>{ar ? "Verified legal address (draft):" : "Verified legal address (draft):"}</strong> {draftAddress}
+          <strong>Verified legal address (draft):</strong> {draftAddress}
         </p>
         <p>
-          {ar ? "حالة التحقق:" : "Verification:"}{" "}
-          <strong>{verified ? "verified" : "not verified"}</strong>
+          {ar ? "حالة التحقق:" : "Verification:"} <strong>{verified ? "verified" : "not verified"}</strong>
         </p>
       </section>
 
@@ -125,77 +149,87 @@ export default async function IraqPaymentsAdminPage({
         {rows.length === 0 ? (
           <div className="emptyState">
             <ShieldCheck />
-            <h3>{ar ? "لا توجد صفوف بعد — طبّق migration 015" : "No rows yet — apply migration 015"}</h3>
+            <h3>{ar ? "لا توجد صفوف بعد — طبّق migrations 015 و016" : "No rows yet — apply migrations 015 and 016"}</h3>
           </div>
         ) : (
           <div className="settingsList">
-            {rows.map((row) => (
-              <article key={row.id} className="settingsRow" style={{ display: "block" }}>
-                <form action={saveIraqPaymentAccountAction} className="formGrid">
-                  <input type="hidden" name="locale" value={locale} />
-                  <input type="hidden" name="id" value={row.id} />
-                  <label>
-                    <span>Code</span>
-                    <input value={row.payment_method_code} readOnly />
-                  </label>
-                  <label>
-                    <span>{ar ? "الاسم عربي" : "Name AR"}</span>
-                    <input name="displayNameAr" defaultValue={row.display_name_ar} required />
-                  </label>
-                  <label>
-                    <span>{ar ? "الاسم إنجليزي" : "Name EN"}</span>
-                    <input name="displayNameEn" defaultValue={row.display_name_en} required />
-                  </label>
-                  <label>
-                    <span>Mode</span>
-                    <select name="integrationMode" defaultValue={row.integration_mode}>
-                      <option value="manual">manual</option>
-                      <option value="api">api</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Min</span>
-                    <input name="minAmount" type="number" defaultValue={row.min_amount ?? ""} />
-                  </label>
-                  <label>
-                    <span>Max</span>
-                    <input name="maxAmount" type="number" defaultValue={row.max_amount ?? ""} />
-                  </label>
-                  <label>
-                    <span>Sort</span>
-                    <input name="sortOrder" type="number" defaultValue={row.sort_order} />
-                  </label>
-                  <label className="checkLine">
-                    <input type="checkbox" name="enabled" defaultChecked={row.enabled} />
-                    {ar ? "مفعّلة" : "Enabled"}
-                  </label>
-                  <label className="fullField">
-                    <span>{ar ? "تعليمات عربية (تظهر بعد الطلب فقط)" : "Arabic instructions (after order only)"}</span>
-                    <textarea name="instructionsAr" rows={3} defaultValue={row.instructions_ar || ""} />
-                  </label>
-                  <label className="fullField">
-                    <span>{ar ? "تعليمات إنجليزية" : "English instructions"}</span>
-                    <textarea name="instructionsEn" rows={3} defaultValue={row.instructions_en || ""} />
-                  </label>
-                  <label className="fullField">
-                    <span>
-                      {ar
-                        ? "بيانات الحساب (تُشفَّر — رقم/IBAN/هاتف). لا تُعرض للعامة."
-                        : "Account payload (encrypted — number/IBAN/phone). Never public."}
-                    </span>
-                    <textarea
-                      name="accountPayload"
-                      rows={2}
-                      placeholder={row.account_payload_encrypted ? "(encrypted — leave blank to keep)" : ""}
-                    />
-                  </label>
-                  <button className="primaryButton" type="submit">
-                    <Save />
-                    {ar ? "حفظ" : "Save"}
-                  </button>
-                </form>
-              </article>
-            ))}
+            {rows.map((row) => {
+              const supportsApi = row.payment_method_code === "zain_cash";
+              return (
+                <article key={row.id} className="settingsRow" style={{ display: "block" }}>
+                  <form action={saveIraqPaymentAccountAction} className="formGrid">
+                    <input type="hidden" name="locale" value={locale} />
+                    <input type="hidden" name="id" value={row.id} />
+                    <label>
+                      <span>Code</span>
+                      <input value={row.payment_method_code} readOnly />
+                    </label>
+                    <label>
+                      <span>{ar ? "الاسم عربي" : "Name AR"}</span>
+                      <input name="displayNameAr" defaultValue={row.display_name_ar} required />
+                    </label>
+                    <label>
+                      <span>{ar ? "الاسم إنجليزي" : "Name EN"}</span>
+                      <input name="displayNameEn" defaultValue={row.display_name_en} required />
+                    </label>
+                    <label>
+                      <span>Mode</span>
+                      {supportsApi ? (
+                        <select name="integrationMode" defaultValue={row.integration_mode === "api" ? "api" : "manual"}>
+                          <option value="manual">manual</option>
+                          <option value="api">api — official Zain Cash adapter</option>
+                        </select>
+                      ) : (
+                        <>
+                          <input type="hidden" name="integrationMode" value="manual" />
+                          <input value="manual" readOnly />
+                        </>
+                      )}
+                    </label>
+                    <label>
+                      <span>Min</span>
+                      <input name="minAmount" type="number" defaultValue={row.min_amount ?? ""} />
+                    </label>
+                    <label>
+                      <span>Max</span>
+                      <input name="maxAmount" type="number" defaultValue={row.max_amount ?? ""} />
+                    </label>
+                    <label>
+                      <span>{ar ? "الترتيب" : "Sort"}</span>
+                      <input name="sortOrder" type="number" defaultValue={row.sort_order} />
+                    </label>
+                    <label className="checkLine">
+                      <input type="checkbox" name="enabled" defaultChecked={row.enabled} />
+                      {ar ? "مفعّلة" : "Enabled"}
+                    </label>
+                    <label className="fullField">
+                      <span>{ar ? "تعليمات عربية (تظهر بعد الطلب فقط)" : "Arabic instructions (after order only)"}</span>
+                      <textarea name="instructionsAr" rows={3} defaultValue={row.instructions_ar || ""} />
+                    </label>
+                    <label className="fullField">
+                      <span>{ar ? "تعليمات إنجليزية" : "English instructions"}</span>
+                      <textarea name="instructionsEn" rows={3} defaultValue={row.instructions_en || ""} />
+                    </label>
+                    <label className="fullField">
+                      <span>
+                        {ar
+                          ? "بيانات الحساب (تُشفَّر — رقم/IBAN/هاتف). مطلوبة قبل تفعيل أي مسار يدوي."
+                          : "Account payload (encrypted — number/IBAN/phone). Required before enabling a manual route."}
+                      </span>
+                      <textarea
+                        name="accountPayload"
+                        rows={2}
+                        placeholder={row.account_payload_encrypted ? "(encrypted — leave blank to keep)" : ""}
+                      />
+                    </label>
+                    <button className="primaryButton" type="submit">
+                      <Save />
+                      {ar ? "حفظ" : "Save"}
+                    </button>
+                  </form>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
