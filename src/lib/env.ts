@@ -65,7 +65,7 @@ const publicSchema = z.object({
   NEXT_PUBLIC_VARA_LICENSE_VALID_FROM: optionalNonEmpty,
   NEXT_PUBLIC_VARA_LICENSE_VALID_TO: optionalNonEmpty,
   NEXT_PUBLIC_KYC_INTAKE_ENABLED: booleanString.default(false),
-  NEXT_PUBLIC_PROOF_INTAKE_ENABLED: booleanString.default(true),
+  NEXT_PUBLIC_PROOF_INTAKE_ENABLED: booleanString.default(false),
 });
 
 const serverSchema = publicSchema.extend({
@@ -80,7 +80,7 @@ const serverSchema = publicSchema.extend({
   TURNSTILE_BYPASS_FOR_TESTS: booleanString.default(false),
   CSRF_ALLOWED_HOSTS: optionalNonEmpty,
   KYC_INTAKE_ENABLED: booleanString.default(false),
-  PROOF_INTAKE_ENABLED: booleanString.default(true),
+  PROOF_INTAKE_ENABLED: booleanString.default(false),
   AUTH_EMAIL_PROVIDER_CONFIGURED: booleanString,
   SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(15).max(300).default(60),
   MAX_UPLOAD_BYTES: z.coerce.number().int().min(1024).max(10_485_760).default(10_485_760),
