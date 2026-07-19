@@ -1,13 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Gulf Gate favicon">
-  <rect width="64" height="64" rx="12" fill="#071426"/>
-  <g transform="translate(4 4)">
-    <path fill="none" stroke="#C9A24D" stroke-width="3.5" stroke-linejoin="round" d="M12 12h40v40H12z"/>
-    <path fill="none" stroke="#C9A24D" stroke-width="2.4" stroke-linecap="round" d="M20 12v40M44 12v40"/>
-    <path fill="none" stroke="#E1BD69" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"
-          d="M28 23c-2.6-1.7-6-1.1-7.7 1.5-1.8 2.7-1 6.3 1.7 8 2.5 1.6 5.9 1 7.6-1.4"/>
-    <path fill="none" stroke="#E1BD69" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"
-          d="M43 23c-2.6-1.7-6-1.1-7.7 1.5-1.8 2.7-1 6.3 1.7 8 2.5 1.6 5.9 1 7.6-1.4"/>
-    <path fill="none" stroke="#28C7D9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
-          d="M21 40h22m0 0-4-4M43 40l-4 4"/>
-  </g>
+  <rect width="64" height="64" rx="14" fill="#F3EFE6"/>
+  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#D8C8AA"/>
+  <defs>
+    <linearGradient id="gold" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D7BB80"/>
+      <stop offset="0.55" stop-color="#B58B45"/>
+      <stop offset="1" stop-color="#8F692F"/>
+    </linearGradient>
+  </defs>
+  <path d="M11 52V29C11 16.8 20.4 8 32 8s21 8.8 21 21v23" fill="none" stroke="url(#gold)" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M20 52V31c0-7.7 5.3-13 12-13s12 5.3 12 13v21" fill="none" stroke="url(#gold)" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M16 52h32M24 52V29m8 23V23m8 29V29" fill="none" stroke="#191713" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="m32 34 4.2 4.2L32 42.4l-4.2-4.2L32 34Z" fill="#B58B45"/>
 </svg>

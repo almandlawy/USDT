@@ -82,6 +82,15 @@ jobs:
         run: npm run test:e2e:mobile
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      - name: Upload local E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-e2e-${{ github.sha }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
       - name: Stop app
         if: always()
         run: kill $(cat /tmp/next.pid) || true

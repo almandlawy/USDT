@@ -79,7 +79,7 @@ test.describe("production revision signature", () => {
     }
   });
 
-  test("brand assets and icons are published", async ({ request, page }) => {
+  test("brand assets, architectural identity, and country routes are published", async ({ request, page }) => {
     for (const path of [
       "/favicon.ico",
       "/favicon.svg",
@@ -90,18 +90,32 @@ test.describe("production revision signature", () => {
       "/maskable-icon-192.png",
       "/brand/gulf-gate-symbol.svg",
       "/brand/gulf-gate-logo-dark.svg",
+      "/brand/gulf-gate-logo-light.svg",
       "/og/gulf-gate-cover.png",
       "/manifest.webmanifest",
     ]) {
       const response = await request.get(path);
       expect(response.status(), path).toBe(200);
     }
+
     await page.goto("/ar");
     await expect(page.locator('.brand img, .brandMark, img[alt*="Gulf Gate"]').first()).toBeVisible();
+    await expect(page.locator(".portalArtwork")).toBeVisible();
+    await expect(page.getByText("اختر دولة الدفع", { exact: true })).toBeVisible();
+
     const body = await page.locator("body").innerText();
-    expect(body).toMatch(/اشترِ USDT|Buy USDT|اختر دولة الدفع|Choose payment country/);
     expect(body).not.toMatch(/FEE_BPS|3,?500\s*IQD/);
     expect(body).not.toMatch(/VARA Licence Number|Trade Licence Number/);
-    expect(body).toMatch(/FIB|SuperQi|Zain Cash/);
+
+    await page.getByRole("tab", { name: /العراق/ }).click();
+    await expect(page.getByText("FIB", { exact: true })).toBeVisible();
+    await expect(page.getByText("SuperQi", { exact: true })).toBeVisible();
+    await expect(page.getByText("Zain Cash", { exact: true })).toBeVisible();
+    await expect(page.locator(".countryPanel").getByText("Stripe", { exact: true })).toHaveCount(0);
+
+    await page.getByRole("tab", { name: /الإمارات/ }).click();
+    await expect(page.getByText("Stripe", { exact: true })).toBeVisible();
+    await expect(page.getByText("e& money", { exact: true })).toBeVisible();
+    await expect(page.getByText("du Pay", { exact: true })).toBeVisible();
   });
 });

@@ -1,24 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Gulf Gate symbol">
   <title>Gulf Gate</title>
-  <!-- Geometric portal + GG monogram. Gold primary, cyan flow accent. -->
   <defs>
-    <linearGradient id="ggGold" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#E1BD69"/>
-      <stop offset="0.55" stop-color="#C9A24D"/>
-      <stop offset="1" stop-color="#A9842F"/>
+    <linearGradient id="gold" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D7BB80"/>
+      <stop offset="0.55" stop-color="#B58B45"/>
+      <stop offset="1" stop-color="#8F692F"/>
     </linearGradient>
   </defs>
-  <!-- Outer gate frame -->
-  <path fill="none" stroke="url(#ggGold)" stroke-width="3.2" stroke-linejoin="round"
-        d="M12 14h40v36H12z"/>
-  <path fill="none" stroke="url(#ggGold)" stroke-width="2.2" stroke-linecap="round"
-        d="M20 14v36M44 14v36"/>
-  <!-- Dual G monogram as open portals -->
-  <path fill="none" stroke="url(#ggGold)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"
-        d="M28.5 24.5c-2.8-1.8-6.4-1.2-8.2 1.6-1.9 2.9-1.1 6.7 1.8 8.5 2.7 1.7 6.3 1.1 8.1-1.5"/>
-  <path fill="none" stroke="url(#ggGold)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"
-        d="M43.5 24.5c-2.8-1.8-6.4-1.2-8.2 1.6-1.9 2.9-1.1 6.7 1.8 8.5 2.7 1.7 6.3 1.1 8.1-1.5"/>
-  <!-- Flow / transfer accent -->
-  <path fill="none" stroke="#28C7D9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-        d="M22 40.5h20m0 0-4.2-4.2M42 40.5l-4.2 4.2"/>
+  <path d="M11 52V29C11 16.8 20.4 8 32 8s21 8.8 21 21v23" fill="none" stroke="url(#gold)" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M20 52V31c0-7.7 5.3-13 12-13s12 5.3 12 13v21" fill="none" stroke="url(#gold)" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M16 52h32M24 52V29m8 23V23m8 29V29" fill="none" stroke="#191713" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="m32 34 4.2 4.2L32 42.4l-4.2-4.2L32 34Z" fill="#B58B45"/>
 </svg>

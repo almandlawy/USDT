@@ -1,0 +1,792 @@
+/* Gulf Gate — single source of truth for the visual identity.
+   Palette: warm ivory, porcelain white, charcoal, restrained metallic gold.
+   No cyan, mint, navy, or competing gradients are used in branded UI. */
+
+:root {
+  --gg-bg: #f3efe6;
+  --gg-bg-soft: #f8f5ee;
+  --gg-paper: #fffdf9;
+  --gg-paper-strong: #ffffff;
+  --gg-ink: #191713;
+  --gg-ink-soft: #2b2822;
+  --gg-muted: #746e64;
+  --gg-muted-2: #948c80;
+  --gg-gold: #b58b45;
+  --gg-gold-deep: #8f692f;
+  --gg-gold-light: #d7bb80;
+  --gg-gold-wash: #efe3ca;
+  --gg-charcoal: #181816;
+  --gg-charcoal-2: #24211d;
+  --gg-line: rgba(119, 91, 43, .18);
+  --gg-line-strong: rgba(119, 91, 43, .32);
+  --gg-success: #32664d;
+  --gg-warning: #986d23;
+  --gg-danger: #a64642;
+  --gg-radius-sm: 10px;
+  --gg-radius-md: 16px;
+  --gg-radius-lg: 24px;
+  --gg-radius-xl: 34px;
+  --gg-shadow-sm: 0 10px 30px rgba(57, 46, 28, .06);
+  --gg-shadow-md: 0 22px 54px rgba(57, 46, 28, .10);
+  --gg-shadow-lg: 0 34px 90px rgba(42, 34, 20, .14);
+
+  /* Remap the legacy token names used throughout the app. */
+  --color-bg: var(--gg-bg);
+  --color-surface: var(--gg-paper);
+  --color-surface-elevated: var(--gg-paper-strong);
+  --color-border: var(--gg-line);
+  --color-text: var(--gg-ink);
+  --color-muted: var(--gg-muted);
+  --color-gold: var(--gg-gold);
+  --color-gold-hover: var(--gg-gold-light);
+  --color-cyan: var(--gg-gold-deep);
+  --color-success: var(--gg-success);
+  --color-warning: var(--gg-warning);
+  --color-danger: var(--gg-danger);
+  --navy-950: var(--gg-bg);
+  --navy-900: var(--gg-bg);
+  --navy-850: var(--gg-bg-soft);
+  --navy-800: var(--gg-paper);
+  --navy-700: #e9e2d5;
+  --forest: var(--gg-charcoal);
+  --mint: var(--gg-gold-light);
+  --mint-deep: var(--gg-gold);
+  --gold-300: var(--gg-gold-light);
+  --gold-400: var(--gg-gold);
+  --gold-500: var(--gg-gold-deep);
+  --cyan-400: var(--gg-gold);
+  --cyan-500: var(--gg-gold-deep);
+  --ink: var(--gg-ink);
+  --muted: var(--gg-muted);
+  --line: var(--gg-line);
+  --shadow: var(--gg-shadow-lg);
+  --radius: var(--gg-radius-lg);
+}
+
+html,
+body {
+  color: var(--gg-ink);
+  background: var(--gg-bg);
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 86% 5%, rgba(181, 139, 69, .09), transparent 24rem),
+    linear-gradient(rgba(143, 105, 47, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143, 105, 47, .025) 1px, transparent 1px);
+  background-size: auto, 52px 52px, 52px 52px;
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline-color: var(--gg-gold);
+}
+
+/* Shared controls */
+.primaryButton,
+.secondaryButton,
+.textButton,
+.dangerButton,
+.langButton {
+  border-radius: 999px;
+}
+
+.primaryButton {
+  color: #fffaf0;
+  background: linear-gradient(135deg, #c49a53, #8f692f);
+  box-shadow: 0 12px 28px rgba(143, 105, 47, .20);
+}
+
+.primaryButton:hover {
+  background: linear-gradient(135deg, #cda75f, #9d7537);
+}
+
+.secondaryButton,
+.textButton,
+.langButton {
+  color: var(--gg-ink);
+  background: rgba(255, 253, 249, .78);
+  border: 1px solid var(--gg-line);
+  box-shadow: none;
+}
+
+.secondaryButton:hover,
+.textButton:hover,
+.langButton:hover {
+  color: var(--gg-gold-deep);
+  background: var(--gg-paper-strong);
+  border-color: var(--gg-line-strong);
+}
+
+.statusBadge.info,
+.statusBadge.warning,
+.statusBadge.neutral {
+  color: var(--gg-gold-deep);
+  background: rgba(181, 139, 69, .09);
+  border-color: var(--gg-line-strong);
+}
+
+.statusBadge.success {
+  color: var(--gg-success);
+  background: rgba(50, 102, 77, .08);
+  border-color: rgba(50, 102, 77, .22);
+}
+
+/* Brand */
+.brandMark,
+.brandLogo {
+  filter: none;
+}
+
+.brandMark {
+  width: min(238px, 58vw);
+}
+
+/* Operational notice and market */
+.prelaunchBanner {
+  color: #654b20;
+  background: #eee2c9;
+  border-color: var(--gg-line);
+}
+
+.prelaunchBanner strong {
+  border-color: var(--gg-line-strong);
+}
+
+.prelaunchBanner.operational {
+  color: #28533f;
+  background: #e6eee8;
+  border-color: rgba(50, 102, 77, .20);
+}
+
+.marketingHeader {
+  color: var(--gg-ink);
+  background: rgba(255, 253, 249, .92);
+  border-color: var(--gg-line);
+  box-shadow: 0 8px 32px rgba(59, 46, 25, .045);
+}
+
+.desktopNav {
+  color: #5d584f;
+}
+
+.desktopNav a:hover {
+  color: var(--gg-gold-deep);
+}
+
+.mobileMenu nav {
+  color: var(--gg-ink);
+  background: var(--gg-paper);
+  border-color: var(--gg-line);
+}
+
+.mobileMenu nav a {
+  color: var(--gg-ink-soft);
+}
+
+.mobileMenu nav a:hover {
+  color: var(--gg-gold-deep);
+  background: var(--gg-gold-wash);
+}
+
+.marketStrip {
+  color: #f7f0e3;
+  background: var(--gg-charcoal);
+  border-color: rgba(215, 187, 128, .16);
+}
+
+.marketAssets article,
+.marketStripInner {
+  border-color: rgba(215, 187, 128, .14);
+}
+
+.marketLabel,
+.marketAssets article > small,
+.marketRefresh {
+  color: var(--gg-gold-light);
+}
+
+.marketLabel b,
+.marketAssets article strong {
+  color: #fffaf0;
+}
+
+.marketLabel small,
+.marketAssets article > span small,
+.marketDisclaimer {
+  color: #aaa296;
+}
+
+.marketRefresh {
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(215, 187, 128, .18);
+}
+
+/* Hero */
+.heroSection {
+  min-height: 760px;
+  color: var(--gg-ink);
+  background:
+    radial-gradient(circle at 80% 24%, rgba(181, 139, 69, .12), transparent 24rem),
+    radial-gradient(circle at 12% 88%, rgba(255, 255, 255, .9), transparent 28rem),
+    linear-gradient(145deg, #fffdf8 0%, #f5f0e6 58%, #ece4d6 100%);
+}
+
+.heroSection::before {
+  opacity: .38;
+  background-image:
+    linear-gradient(rgba(143, 105, 47, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143, 105, 47, .045) 1px, transparent 1px);
+  background-size: 58px 58px;
+}
+
+.mintOrb,
+.goldOrb {
+  background: rgba(181, 139, 69, .07);
+  box-shadow: 0 0 130px rgba(181, 139, 69, .12);
+}
+
+.heroCopy h1,
+.sectionTitle h2,
+.securityGrid h2,
+.authHeading h2 {
+  color: var(--gg-charcoal);
+  font-weight: 650;
+  letter-spacing: -.035em;
+}
+
+.heroCopy h1 span {
+  color: var(--gg-gold-deep);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.heroCopy > p,
+.sectionTitle p,
+.securityGrid > div > p {
+  color: var(--gg-muted);
+}
+
+.heroBrand .brand small,
+.sectionTitle > span,
+.sectionKicker,
+.topbarKicker,
+.workspaceLabel {
+  color: var(--gg-gold-deep);
+}
+
+.trustRow {
+  color: #6e685f;
+}
+
+.trustRow svg {
+  color: var(--gg-gold-deep);
+}
+
+/* Quote desk */
+.exchangeDesk {
+  color: var(--gg-ink);
+  background: rgba(255, 253, 249, .91);
+  border: 1px solid var(--gg-line);
+  box-shadow: var(--gg-shadow-lg);
+  backdrop-filter: blur(18px);
+}
+
+.exchangeTabs {
+  background: #eee7da;
+}
+
+.exchangeTabs button {
+  color: #6e675d;
+}
+
+.exchangeTabs button.active {
+  color: #fffaf0;
+  background: linear-gradient(135deg, #c49a53, #8f692f);
+  box-shadow: 0 8px 20px rgba(143, 105, 47, .18);
+}
+
+.exchangeBadge,
+.exchangeBadge.operational {
+  color: var(--gg-gold-deep);
+  background: var(--gg-gold-wash);
+}
+
+.exchangeField {
+  color: var(--gg-ink);
+  background: #fffefa;
+  border-color: #ded4c3;
+}
+
+.exchangeField small,
+.exchangeNote,
+.exchangeBreakdown > div {
+  color: var(--gg-muted);
+}
+
+.exchangeField strong,
+.exchangeField input,
+.exchangeField output,
+.exchangeField select,
+.assetChip,
+.exchangeBreakdown dd {
+  color: var(--gg-ink);
+}
+
+.exchangeField select,
+.assetChip {
+  background: #f6f0e5;
+  border-color: #ded4c3;
+}
+
+.exchangeSwap {
+  color: var(--gg-gold-deep);
+  background: var(--gg-paper);
+  border-color: #ded4c3;
+}
+
+/* Marketing sections */
+.sectionBlock,
+.stepsSection,
+.faqSection {
+  color: var(--gg-ink);
+  background: var(--gg-bg-soft);
+}
+
+.sectionBlock:nth-of-type(even) {
+  background: #ece6db;
+}
+
+.featureCard,
+.stepCard,
+.gate,
+.faqList details,
+.contactGrid article,
+.countrySelector,
+.countryPanel,
+.quoteLinkCard,
+.quoteLinkFlow article,
+.networkCard {
+  color: var(--gg-ink);
+  background: rgba(255, 253, 249, .92);
+  border-color: var(--gg-line);
+  box-shadow: var(--gg-shadow-sm);
+}
+
+.featureCard:hover,
+.stepCard:hover,
+.gate:hover,
+.paymentRouteGrid article:hover {
+  border-color: var(--gg-line-strong);
+  transform: translateY(-3px);
+}
+
+.featureIcon,
+.paymentRouteIcon {
+  color: var(--gg-gold-deep);
+  background: var(--gg-gold-wash);
+}
+
+.featureCard h3,
+.stepCard h3,
+.gate h3,
+.faqList summary,
+.countryPanel h3,
+.paymentRouteGrid h4,
+.quoteLinkCard h3 {
+  color: var(--gg-charcoal);
+}
+
+.featureCard p,
+.stepCard p,
+.gate p,
+.faqList p,
+.countryPanel p,
+.paymentRouteGrid p,
+.quoteLinkCard p {
+  color: var(--gg-muted);
+}
+
+.clayIconMedia {
+  background: var(--gg-charcoal);
+  box-shadow: 0 18px 38px rgba(42, 34, 20, .13);
+}
+
+.darkPanel,
+.securitySection,
+.quoteLinkDark,
+.mainFooter {
+  color: #f8f2e7;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(215, 187, 128, .13), transparent 24rem),
+    linear-gradient(135deg, var(--gg-charcoal), var(--gg-charcoal-2));
+}
+
+.darkPanel h2,
+.securitySection h2,
+.mainFooter strong,
+.mainFooter h3 {
+  color: #fffaf0;
+}
+
+.darkPanel p,
+.securitySection p,
+.mainFooter p,
+.mainFooter small {
+  color: #b7afa3;
+}
+
+.darkPanel .infoChip,
+.securityStack > div,
+.footerLock {
+  color: #f7efe2;
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(215, 187, 128, .18);
+}
+
+.darkPanel svg,
+.securityStack > div > svg,
+.mainFooter a:hover {
+  color: var(--gg-gold-light);
+}
+
+/* Country and payment route selector */
+.countrySelector {
+  overflow: hidden;
+  border-radius: var(--gg-radius-xl);
+}
+
+.countrySelectorPrompt {
+  color: var(--gg-gold-deep);
+  background: var(--gg-paper);
+  border-color: var(--gg-line);
+}
+
+.countryTabs {
+  background: #e9e1d3;
+  border-color: var(--gg-line);
+}
+
+.countryTabs button {
+  color: #655f56;
+  background: transparent;
+  border-color: transparent;
+}
+
+.countryTabs button span {
+  color: var(--gg-gold-deep);
+  background: rgba(181, 139, 69, .12);
+}
+
+.countryTabs button.active {
+  color: #fffaf0;
+  background: var(--gg-charcoal);
+}
+
+.countryTabs button.active span {
+  color: var(--gg-charcoal);
+  background: var(--gg-gold-light);
+}
+
+.countryPanel {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.countryCurrency,
+.routeStatus {
+  color: var(--gg-gold-deep);
+  background: var(--gg-gold-wash);
+}
+
+.paymentRouteGrid article {
+  background: #fffefa;
+  border-color: var(--gg-line);
+}
+
+.paymentRouteGrid article.pending {
+  opacity: .68;
+}
+
+.countryPanelFooter {
+  border-color: var(--gg-line);
+}
+
+/* Auth */
+.authPage,
+.authGrid,
+.authMain {
+  color: var(--gg-ink);
+  background: var(--gg-bg);
+}
+
+.authVisual {
+  color: #fff7e8;
+  background:
+    radial-gradient(circle at 65% 18%, rgba(215, 187, 128, .18), transparent 22rem),
+    linear-gradient(150deg, var(--gg-charcoal), #2a261f);
+}
+
+.authVisual p,
+.authVisual li,
+.authFeatureGrid small {
+  color: #b9b0a4;
+}
+
+.authFeatureGrid article {
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(215, 187, 128, .17);
+}
+
+.authFeatureGrid svg,
+.authKicker {
+  color: var(--gg-gold-light);
+}
+
+.authFeatureGrid b {
+  color: #fff8eb;
+}
+
+.authCard {
+  background: rgba(255, 253, 249, .94);
+  border-color: var(--gg-line);
+  box-shadow: var(--gg-shadow-md);
+}
+
+.authHeading span,
+.formMeta a,
+.authFooter a,
+.legalCheck a {
+  color: var(--gg-gold-deep);
+}
+
+.authHeading p,
+.authTrustList,
+.formMeta,
+.authFooter,
+.formNotice {
+  color: var(--gg-muted);
+}
+
+.fieldWithIcon,
+.stackForm select,
+.stackForm input,
+.stackForm textarea {
+  color: var(--gg-ink);
+  background: #fffefa;
+  border-color: #ddd3c1;
+}
+
+.fieldWithIcon:focus-within,
+.stackForm select:focus,
+.stackForm input:focus,
+.stackForm textarea:focus {
+  border-color: var(--gg-gold);
+  box-shadow: 0 0 0 4px rgba(181, 139, 69, .10);
+}
+
+.fieldWithIcon svg {
+  color: var(--gg-gold-deep);
+}
+
+.formNotice {
+  background: #f0e8d9;
+  border-color: var(--gg-line);
+}
+
+/* Product workspace */
+.appFrame,
+.appMain,
+.appContent {
+  color: var(--gg-ink);
+  background: var(--gg-bg);
+}
+
+.appSidebar {
+  color: #eee6da;
+  background: linear-gradient(180deg, var(--gg-charcoal), #24211c);
+  border-color: rgba(215, 187, 128, .16);
+}
+
+.sideNav a {
+  color: #c7beb2;
+}
+
+.sideNav a:hover,
+.sideNav a.active {
+  color: #fffaf0;
+  background: rgba(215, 187, 128, .11);
+}
+
+.sideNav a.active::before {
+  background: var(--gg-gold-light);
+}
+
+.appTopbar {
+  color: var(--gg-ink);
+  background: rgba(255, 253, 249, .92);
+  border-color: var(--gg-line);
+  backdrop-filter: blur(18px);
+}
+
+.avatar,
+.notificationBell,
+.mobileNavTrigger {
+  color: var(--gg-gold-deep);
+  background: var(--gg-gold-wash);
+  border-color: var(--gg-line);
+}
+
+.appContent :is(
+  .dashboardCard,
+  .metricCard,
+  .dataCard,
+  .panel,
+  .tableCard,
+  .settingsCard,
+  .adminCard,
+  .profileCard,
+  .formCard,
+  .emptyState,
+  .orderCard,
+  .ticketCard,
+  .notificationCard
+) {
+  color: var(--gg-ink);
+  background: rgba(255, 253, 249, .94);
+  border-color: var(--gg-line);
+  box-shadow: var(--gg-shadow-sm);
+}
+
+.appContent table {
+  color: var(--gg-ink);
+  background: transparent;
+}
+
+.appContent th {
+  color: #655f56;
+  background: #eee7da;
+}
+
+.appContent td {
+  color: var(--gg-ink-soft);
+  border-color: #e3dacb;
+}
+
+.appContent input,
+.appContent select,
+.appContent textarea {
+  color: var(--gg-ink);
+  background: #fffefa;
+  border-color: #ddd3c1;
+}
+
+.appContent input:focus,
+.appContent select:focus,
+.appContent textarea:focus {
+  border-color: var(--gg-gold);
+  box-shadow: 0 0 0 4px rgba(181, 139, 69, .10);
+}
+
+/* Portal artwork */
+.portalGlow {
+  background: radial-gradient(circle, rgba(181, 139, 69, .22), transparent 67%);
+}
+
+.portalRings i {
+  border-color: rgba(143, 105, 47, .15);
+}
+
+.portalArch {
+  background: linear-gradient(135deg, #ddc184, #b58b45 58%, #7a5725);
+  box-shadow: 0 34px 70px rgba(90, 66, 27, .20);
+}
+
+.portalArchInner {
+  background: #f4ecdf;
+}
+
+.portalDoor {
+  background: linear-gradient(180deg, #fffdf8, #ece1cf);
+  border-color: rgba(143, 105, 47, .26);
+}
+
+.portalDoor span {
+  color: var(--gg-gold-deep);
+}
+
+.portalMicroCards article {
+  color: var(--gg-ink);
+  background: rgba(255, 253, 249, .92);
+  border-color: var(--gg-line);
+  box-shadow: var(--gg-shadow-sm);
+}
+
+.portalMicroCards svg {
+  color: var(--gg-gold-deep);
+}
+
+.portalMicroCards b {
+  color: var(--gg-charcoal);
+}
+
+.portalMicroCards small {
+  color: var(--gg-muted);
+}
+
+/* Error and legal pages */
+.errorPage,
+.legalPage,
+.securityPage {
+  color: var(--gg-ink);
+  background: var(--gg-bg);
+}
+
+.errorPage > span,
+.legalPage a,
+.securityPage a {
+  color: var(--gg-gold-deep);
+}
+
+/* Responsive identity consistency */
+@media (max-width: 900px) {
+  .marketStripInner {
+    background: var(--gg-charcoal);
+  }
+
+  .countryTabs {
+    background: #e9e1d3;
+  }
+
+  .authVisual {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 720px) {
+  .marketingHeader {
+    background: rgba(255, 253, 249, .97);
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(38px, 12vw, 54px);
+  }
+
+  .authVisual {
+    display: none;
+  }
+
+  .authMain {
+    background: var(--gg-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

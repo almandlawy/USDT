@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Rasterise brand SVGs into PNG/ICO assets using sharp (already a Next.js dep).
- * Run: node scripts/generate-brand-assets.mjs
+ * Rasterise Gulf Gate architectural SVGs into PNG/ICO assets.
+ * Run: npm run brand:assets
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -25,9 +25,7 @@ async function pngFromSvg(svg, size, out, background) {
     fit: "contain",
     background: background || { r: 0, g: 0, b: 0, alpha: 0 },
   });
-  if (background && background.alpha === 1) {
-    pipeline = pipeline.flatten({ background });
-  }
+  if (background?.alpha === 1) pipeline = pipeline.flatten({ background });
   await pipeline.png().toFile(out);
   console.log("wrote", out);
 }
@@ -43,29 +41,25 @@ async function pngFixed(svg, width, height, out, background) {
   console.log("wrote", out);
 }
 
-const navy = { r: 7, g: 20, b: 38, alpha: 1 };
+const charcoal = { r: 17, g: 18, b: 22, alpha: 1 };
 
 await pngFromSvg(symbol, 512, join(brandDir, "gulf-gate-symbol.png"));
-await pngFixed(horizontal, 1040, 192, join(brandDir, "gulf-gate-logo-horizontal.png"));
+await pngFixed(horizontal, 1120, 208, join(brandDir, "gulf-gate-logo-horizontal.png"));
 
-const iconSizes = [16, 32, 48, 96, 192, 512];
-for (const size of iconSizes) {
-  await pngFromSvg(faviconSvg, size, join(publicDir, `icon-${size}.png`), navy);
+for (const size of [16, 32, 48, 96, 192, 512]) {
+  await pngFromSvg(faviconSvg, size, join(publicDir, `icon-${size}.png`), charcoal);
 }
 
-await pngFromSvg(faviconSvg, 180, join(publicDir, "apple-touch-icon.png"), navy);
+await pngFromSvg(faviconSvg, 180, join(publicDir, "apple-touch-icon.png"), charcoal);
 
-// Maskable: add safe padding (~20%)
 async function maskable(size, out) {
-  const inner = Math.round(size * 0.62);
+  const inner = Math.round(size * 0.60);
   const pad = Math.round((size - inner) / 2);
   const icon = await sharp(faviconSvg, { density: 320 })
     .resize(inner, inner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer();
-  await sharp({
-    create: { width: size, height: size, channels: 4, background: navy },
-  })
+  await sharp({ create: { width: size, height: size, channels: 4, background: charcoal } })
     .composite([{ input: icon, left: pad, top: pad }])
     .png()
     .toFile(out);
@@ -75,12 +69,11 @@ async function maskable(size, out) {
 await maskable(192, join(publicDir, "maskable-icon-192.png"));
 await maskable(512, join(publicDir, "maskable-icon-512.png"));
 
-// favicon.ico from 16/32/48
 const icoBuffers = await Promise.all(
   [16, 32, 48].map((size) =>
     sharp(faviconSvg, { density: 320 })
-      .resize(size, size, { fit: "contain", background: navy })
-      .flatten({ background: navy })
+      .resize(size, size, { fit: "contain", background: charcoal })
+      .flatten({ background: charcoal })
       .png()
       .toBuffer(),
   ),
@@ -88,36 +81,39 @@ const icoBuffers = await Promise.all(
 writeFileSync(join(publicDir, "favicon.ico"), await pngToIco(icoBuffers));
 console.log("wrote favicon.ico");
 
-// OG cover 1200x630
 const ogSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#071426"/>
-      <stop offset="1" stop-color="#0C1D33"/>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFEFA"/>
+      <stop offset="1" stop-color="#EEE8DC"/>
     </linearGradient>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#E1BD69"/>
-      <stop offset="1" stop-color="#C9A24D"/>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E6CA88"/>
+      <stop offset="0.52" stop-color="#C7A25A"/>
+      <stop offset="1" stop-color="#8F6D2D"/>
     </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <circle cx="1040" cy="90" r="180" fill="#28C7D9" opacity="0.08"/>
-  <circle cx="160" cy="520" r="220" fill="#C9A24D" opacity="0.07"/>
-  <g transform="translate(120 210)">
-    <path fill="none" stroke="url(#g)" stroke-width="10" stroke-linejoin="round" d="M20 20h140v140H20z"/>
-    <path fill="none" stroke="url(#g)" stroke-width="7" stroke-linecap="round" d="M50 20v140M130 20v140"/>
-    <path fill="none" stroke="#E1BD69" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"
-          d="M78 55c-8-5-18-3.5-23 5-5 9-3 20 6 25 8 5 18 3 23-5"/>
-    <path fill="none" stroke="#E1BD69" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"
-          d="M128 55c-8-5-18-3.5-23 5-5 9-3 20 6 25 8 5 18 3 23-5"/>
-    <path fill="none" stroke="#28C7D9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"
-          d="M48 130h84m0 0-14-14M132 130l-14 14"/>
+  <rect width="1200" height="630" fill="url(#paper)"/>
+  <path d="M0 540h1200v90H0z" fill="#111216"/>
+  <g opacity=".18" stroke="#8F6D2D" fill="none">
+    <path d="M790 85 1010 305v230H570V305L790 85Z"/>
+    <path d="M790 120 970 300v205H610V300L790 120Z"/>
+    <path d="M790 155 930 295v180H650V295L790 155Z"/>
   </g>
-  <text x="360" y="300" fill="#E1BD69" font-family="ui-sans-serif, system-ui, sans-serif" font-size="72" font-weight="750" letter-spacing="8">GULF GATE</text>
-  <text x="360" y="360" fill="#94A3B8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="28" font-weight="600" letter-spacing="4">DIGITAL ASSET OPERATIONS</text>
-  <text x="360" y="430" fill="#F4F7FA" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="500">Pre-launch request management — no financial execution</text>
+  <g transform="translate(765 185) scale(3.2)">
+    <path d="M32 5 54 27v30H10V27L32 5Z" fill="none" stroke="url(#gold)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M32 14 45 28v20H19V28L32 14Z" fill="none" stroke="url(#gold)" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M17 53V33m8 20V27m7 26V20m7 33V27m8 26V33" fill="none" stroke="url(#gold)" stroke-width="2.6"/>
+    <path d="m32 35 4 4-4 4-4-4 4-4Z" fill="#C7A25A"/>
+  </g>
+  <text x="90" y="228" fill="#111216" font-family="Georgia, Times New Roman, serif" font-size="76" font-weight="500" letter-spacing="9">GULF GATE</text>
+  <text x="95" y="282" fill="#8F6D2D" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" letter-spacing="5">DIGITAL ASSET OPERATIONS</text>
+  <line x1="95" y1="330" x2="250" y2="330" stroke="#C7A25A" stroke-width="3"/>
+  <text x="95" y="388" fill="#24231F" font-family="Arial, Helvetica, sans-serif" font-size="30">Country-aware payments. Secure quote links.</text>
+  <text x="95" y="430" fill="#746E64" font-family="Arial, Helvetica, sans-serif" font-size="24">Clear digital-asset request operations.</text>
+  <text x="90" y="590" fill="#E2C57E" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="3">PRECISE OPERATIONS · REFINED EXPERIENCE</text>
 </svg>`;
 await sharp(Buffer.from(ogSvg)).png().toFile(join(ogDir, "gulf-gate-cover.png"));
 console.log("wrote og/gulf-gate-cover.png");
-console.log("Brand assets generated.");
+console.log("Architectural brand assets generated.");

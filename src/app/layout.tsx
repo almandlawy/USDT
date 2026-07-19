@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Manrope } from "next/font/google";
 import { getSiteOrigin, SITE_NAME } from "@/lib/site";
 import "./globals.css";
-import "./luxury-theme.css";
+import "./brand-system.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -25,14 +25,7 @@ export const metadata: Metadata = {
   description: "A bilingual platform for managed digital-asset requests.",
   robots: { index: true, follow: true },
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" },
-      { url: "/icon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-    shortcut: ["/favicon.ico"],
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml", sizes: "any" }],
   },
   category: "finance",
 };
@@ -41,7 +34,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   colorScheme: "light",
-  themeColor: "#F7F5EF",
+  themeColor: "#F3EFE6",
 };
 
 export default async function RootLayout({
