@@ -32,10 +32,10 @@ export function CountryPaymentPanel({
   const [country, setCountry] = useState(initial);
 
   const methods = useMemo(() => {
-    const rows = (matrixRows?.length ? matrixRows : fallbackMatrixForCountry(country)).filter(
-      (r) => r.country_code === country,
-    );
-    const source = rows.length ? rows : fallbackMatrixForCountry(country);
+    const hasConfiguredMatrix = matrixRows !== undefined;
+    const candidateRows = hasConfiguredMatrix ? matrixRows : fallbackMatrixForCountry(country);
+    const rows = candidateRows.filter((row) => row.country_code === country);
+    const source = hasConfiguredMatrix ? rows : rows.length ? rows : fallbackMatrixForCountry(country);
     return toPublicMethodDisplays(resolvePaymentMethodsForCountry(source, country));
   }, [country, matrixRows]);
 
@@ -78,37 +78,48 @@ export function CountryPaymentPanel({
                 : "Iraq-specific path — UAE company details and merchant IDs are not shown here."}
             </p>
           ) : null}
-          <ul className="paymentMethodMatrix paymentMethodNamesOnly">
-            {methods.map((method) => (
-              <li key={method.code} className={method.available ? "isAvailable" : "isDisabled"}>
-                <div>
-                  <strong>{locale === "ar" ? method.name_ar : method.name_en}</strong>
-                  <span className="methodLogoBadge" aria-hidden>
-                    {method.code === "fib"
-                      ? "FIB"
-                      : method.code === "superqi"
-                        ? "SQ"
-                        : method.code === "zain_cash"
-                          ? "ZC"
-                          : method.code === "stripe_card"
-                            ? "S"
-                            : method.code === "eand_money"
-                              ? "e&"
-                              : method.code === "dupay"
-                                ? "du"
-                                : "BT"}
-                  </span>
-                </div>
-                {!method.available && method.disabledReason ? (
-                  <p className="methodHint">{locale === "ar" ? method.disabledReason.ar : method.disabledReason.en}</p>
-                ) : (
-                  <p className="methodHint">
-                    {ar ? "التفاصيل بعد إنشاء الطلب" : "Details after order creation"}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
+          {methods.length ? (
+            <ul className="paymentMethodMatrix paymentMethodNamesOnly">
+              {methods.map((method) => (
+                <li key={method.code} className={method.available ? "isAvailable" : "isDisabled"}>
+                  <div>
+                    <strong>{locale === "ar" ? method.name_ar : method.name_en}</strong>
+                    <span className="methodLogoBadge" aria-hidden>
+                      {method.code === "fib"
+                        ? "FIB"
+                        : method.code === "superqi"
+                          ? "SQ"
+                          : method.code === "zain_cash"
+                            ? "ZC"
+                            : method.code === "stripe_card"
+                              ? "S"
+                              : method.code === "eand_money"
+                                ? "e&"
+                                : method.code === "dupay"
+                                  ? "du"
+                                  : "BT"}
+                    </span>
+                  </div>
+                  {!method.available && method.disabledReason ? (
+                    <p className="methodHint">{locale === "ar" ? method.disabledReason.ar : method.disabledReason.en}</p>
+                  ) : (
+                    <p className="methodHint">
+                      {ar ? "التفاصيل بعد إنشاء الطلب" : "Details after order creation"}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="emptyState paymentMethodsEmpty">
+              <h3>{ar ? "لا توجد وسيلة مفعّلة حالياً" : "No payment method is currently enabled"}</h3>
+              <p>
+                {ar
+                  ? "تظهر الوسائل هنا بعد إعداد حساب التاجر وتفعيلها من لوحة الإدارة."
+                  : "Methods appear here only after merchant details are configured and enabled by administration."}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </section>
