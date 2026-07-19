@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CircleAlert, LockKeyhole, Save, ShieldCheck } from "lucide-react";
+import { CircleAlert, CreditCard, LockKeyhole, Save, ShieldCheck } from "lucide-react";
 import { canAccessAdminSection } from "@/lib/admin-permissions";
 import { requireStaff } from "@/lib/auth";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
-import { companyAdminDraftAddress, isCompanyLegalDetailsVerified } from "@/lib/company/legal";
-import { saveIraqPaymentAccountAction } from "../../iraq-actions";
+import { canUseStripeCheckout } from "@/lib/payments/flags";
+import { saveUaePaymentAccountAction } from "../../uae-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +22,6 @@ type AccountRow = {
   min_amount: number | null;
   max_amount: number | null;
   sort_order: number;
-  valid_from: string | null;
-  valid_to: string | null;
   instructions_ar: string | null;
   instructions_en: string | null;
   account_payload_encrypted: string | null;
@@ -34,21 +32,21 @@ function errorMessage(code: string | undefined, ar: boolean) {
     case "configuration":
       return ar ? "إعداد Supabase غير مكتمل." : "Supabase configuration is incomplete.";
     case "missing_payment_details":
-      return ar ? "لا يمكن تفعيل الوسيلة قبل إضافة بيانات دفع مشفرة أو QR." : "Add encrypted payment details or a QR asset before enabling this method.";
-    case "api_not_implemented":
-      return ar ? "وضع API غير منفذ لهذه الوسيلة. FIB وSuperQi والتحويل البنكي تعمل يدوياً حالياً." : "API mode is not implemented for this method. FIB, SuperQi, and bank transfer are manual routes.";
-    case "zaincash_not_ready":
-      return ar ? "ربط زين كاش غير جاهز: فعّل بوابة الدفع الحقيقي وأضف بيانات الإنتاج والـWebhook أولاً." : "Zain Cash is not ready: enable real payments and configure production credentials and webhook first.";
+      return ar ? "لا يمكن تفعيل المسار اليدوي قبل إضافة بيانات دفع مشفرة أو QR." : "Add encrypted payment details or a QR asset before enabling a manual route.";
+    case "stripe_not_ready":
+      return ar ? "Stripe غير جاهز: يجب تفعيل STRIPE_ENABLED وSTRIPE_CRYPTO_APPROVED وREAL_PAYMENTS_ENABLED وإضافة مفاتيح الإنتاج والـWebhook." : "Stripe is not ready: enable all approval gates and configure production and webhook secrets.";
+    case "unsupported_method":
+      return ar ? "طريقة الدفع غير مدعومة في لوحة الإمارات." : "This payment method is not supported by the UAE admin page.";
     case "account_not_found":
       return ar ? "حساب الدفع غير موجود." : "Payment account was not found.";
     case "save_failed":
-      return ar ? "تعذر حفظ حساب الدفع. راجع الإعدادات والحدود." : "Could not save the payment account. Review its configuration and limits.";
+      return ar ? "تعذر حفظ حساب الدفع. راجع البيانات والحدود." : "Could not save the payment account. Review its details and limits.";
     default:
       return code || (ar ? "حدث خطأ." : "Something went wrong.");
   }
 }
 
-export default async function IraqPaymentsAdminPage({
+export default async function UaePaymentsAdminPage({
   params,
   searchParams,
 }: {
@@ -67,42 +65,41 @@ export default async function IraqPaymentsAdminPage({
   const query = await searchParams;
   let rows: AccountRow[] = [];
   let loadError: string | undefined;
-
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("country_payment_accounts")
       .select(
-        "id,payment_method_code,display_name_ar,display_name_en,integration_mode,enabled,currency_code,min_amount,max_amount,sort_order,valid_from,valid_to,instructions_ar,instructions_en,account_payload_encrypted",
+        "id,payment_method_code,display_name_ar,display_name_en,integration_mode,enabled,currency_code,min_amount,max_amount,sort_order,instructions_ar,instructions_en,account_payload_encrypted",
       )
-      .eq("country_code", "IQ")
+      .eq("country_code", "AE")
       .order("sort_order");
     if (error) loadError = error.message;
     rows = (data || []) as AccountRow[];
   }
 
-  const draftAddress = companyAdminDraftAddress();
-  const verified = isCompanyLegalDetailsVerified();
+  const stripeReady = canUseStripeCheckout();
 
   return (
     <>
       <div className="pageHeading">
         <div>
-          <span>{ar ? "الإدارة" : "Admin"} / payments / iraq</span>
-          <h1>{ar ? "حسابات الدفع العراقية" : "Iraq payment accounts"}</h1>
+          <span>{ar ? "الإدارة" : "Admin"} / payments / uae</span>
+          <h1>{ar ? "حسابات الدفع الإماراتية" : "UAE payment accounts"}</h1>
           <p>
             {ar
-              ? "FIB وSuperQi والتحويل البنكي تعمل يدوياً. زين كاش يمكن أن يكون يدوياً أو API بعد اكتمال بيانات الإنتاج."
-              : "FIB, SuperQi, and bank transfer are manual routes. Zain Cash can be manual or API after production setup is complete."}
+              ? "Stripe يعمل عبر API بعد اكتمال جميع البوابات. e& money وdu Pay والتحويل البنكي تبقى مسارات يدوية مع إثبات دفع."
+              : "Stripe uses its API only after every gate is complete. e& money, du Pay, and bank transfer remain manual proof routes."}
           </p>
           <div className="heroActions">
-            <Link className="secondaryButton small" href={`/${locale}/admin/payments/uae`}>
-              {ar ? "إدارة مدفوعات الإمارات" : "Manage UAE payments"}
+            <Link className="secondaryButton small" href={`/${locale}/admin/payments/iraq`}>
+              {ar ? "إدارة مدفوعات العراق" : "Manage Iraq payments"}
             </Link>
           </div>
         </div>
-        <span className="statusBadge" data-tone="warning">
-          <LockKeyhole size={14} /> Super Admin / Finance
+        <span className="statusBadge" data-tone={stripeReady ? "success" : "warning"}>
+          {stripeReady ? <ShieldCheck size={14} /> : <LockKeyhole size={14} />}
+          Stripe {stripeReady ? "READY" : "LOCKED"}
         </span>
       </div>
 
@@ -122,30 +119,17 @@ export default async function IraqPaymentsAdminPage({
       <section className="panel">
         <div className="panelHeading">
           <div>
-            <span>ADMIN ONLY</span>
-            <h2>{ar ? "العنوان القانوني (مسودة)" : "Legal address (draft)"}</h2>
+            <span>AE · AED</span>
+            <h2>{ar ? "مسارات الإمارات" : "UAE routes"}</h2>
           </div>
+          <CreditCard />
         </div>
         <p className="methodHint">
           {ar
-            ? "لا يُنشر في Footer أو الصفحات القانونية إلا بعد COMPANY_LEGAL_DETAILS_VERIFIED=true."
-            : "Not published in footer/legal pages until COMPANY_LEGAL_DETAILS_VERIFIED=true."}
+            ? "مفاتيح Stripe تُحفظ في Vercel فقط. أرقام المحافظ والحسابات اليدوية تُحفظ مشفرة هنا ولا تظهر قبل إنشاء طلب صالح."
+            : "Stripe secrets belong in Vercel only. Manual wallet and bank details are encrypted here and stay hidden until a valid order exists."}
         </p>
-        <p>
-          <strong>Verified legal address (draft):</strong> {draftAddress}
-        </p>
-        <p>
-          {ar ? "حالة التحقق:" : "Verification:"} <strong>{verified ? "verified" : "not verified"}</strong>
-        </p>
-      </section>
 
-      <section className="panel">
-        <div className="panelHeading">
-          <div>
-            <span>IQ · IQD</span>
-            <h2>{ar ? "الوسائل الأربع" : "Four methods"}</h2>
-          </div>
-        </div>
         {rows.length === 0 ? (
           <div className="emptyState">
             <ShieldCheck />
@@ -154,10 +138,10 @@ export default async function IraqPaymentsAdminPage({
         ) : (
           <div className="settingsList">
             {rows.map((row) => {
-              const supportsApi = row.payment_method_code === "zain_cash";
+              const isStripe = row.payment_method_code === "stripe_card";
               return (
                 <article key={row.id} className="settingsRow" style={{ display: "block" }}>
-                  <form action={saveIraqPaymentAccountAction} className="formGrid">
+                  <form action={saveUaePaymentAccountAction} className="formGrid">
                     <input type="hidden" name="locale" value={locale} />
                     <input type="hidden" name="id" value={row.id} />
                     <label>
@@ -174,17 +158,7 @@ export default async function IraqPaymentsAdminPage({
                     </label>
                     <label>
                       <span>Mode</span>
-                      {supportsApi ? (
-                        <select name="integrationMode" defaultValue={row.integration_mode === "api" ? "api" : "manual"}>
-                          <option value="manual">manual</option>
-                          <option value="api">api — official Zain Cash adapter</option>
-                        </select>
-                      ) : (
-                        <>
-                          <input type="hidden" name="integrationMode" value="manual" />
-                          <input value="manual" readOnly />
-                        </>
-                      )}
+                      <input value={isStripe ? "api" : "manual"} readOnly />
                     </label>
                     <label>
                       <span>Min</span>
@@ -199,29 +173,33 @@ export default async function IraqPaymentsAdminPage({
                       <input name="sortOrder" type="number" defaultValue={row.sort_order} />
                     </label>
                     <label className="checkLine">
-                      <input type="checkbox" name="enabled" defaultChecked={row.enabled} />
+                      <input type="checkbox" name="enabled" defaultChecked={row.enabled} disabled={isStripe && !stripeReady} />
                       {ar ? "مفعّلة" : "Enabled"}
                     </label>
                     <label className="fullField">
-                      <span>{ar ? "تعليمات عربية (تظهر بعد الطلب فقط)" : "Arabic instructions (after order only)"}</span>
+                      <span>{ar ? "تعليمات عربية (بعد الطلب فقط)" : "Arabic instructions (after order only)"}</span>
                       <textarea name="instructionsAr" rows={3} defaultValue={row.instructions_ar || ""} />
                     </label>
                     <label className="fullField">
                       <span>{ar ? "تعليمات إنجليزية" : "English instructions"}</span>
                       <textarea name="instructionsEn" rows={3} defaultValue={row.instructions_en || ""} />
                     </label>
-                    <label className="fullField">
-                      <span>
-                        {ar
-                          ? "بيانات الحساب (تُشفَّر — رقم/IBAN/هاتف). مطلوبة قبل تفعيل أي مسار يدوي."
-                          : "Account payload (encrypted — number/IBAN/phone). Required before enabling a manual route."}
-                      </span>
-                      <textarea
-                        name="accountPayload"
-                        rows={2}
-                        placeholder={row.account_payload_encrypted ? "(encrypted — leave blank to keep)" : ""}
-                      />
-                    </label>
+                    {!isStripe ? (
+                      <label className="fullField">
+                        <span>
+                          {ar
+                            ? "بيانات الدفع اليدوي (تُشفّر — هاتف/IBAN/حساب). مطلوبة قبل التفعيل."
+                            : "Manual payment details (encrypted — phone/IBAN/account). Required before enabling."}
+                        </span>
+                        <textarea
+                          name="accountPayload"
+                          rows={2}
+                          placeholder={row.account_payload_encrypted ? "(encrypted — leave blank to keep)" : ""}
+                        />
+                      </label>
+                    ) : (
+                      <input type="hidden" name="accountPayload" value="" />
+                    )}
                     <button className="primaryButton" type="submit">
                       <Save />
                       {ar ? "حفظ" : "Save"}
