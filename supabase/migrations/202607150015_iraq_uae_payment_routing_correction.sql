@@ -116,6 +116,7 @@ begin
     check (integration_mode in ('api', 'manual', 'disabled'));
 end $$;
 
+drop trigger if exists country_payment_accounts_updated_at on public.country_payment_accounts;
 create trigger country_payment_accounts_updated_at before update on public.country_payment_accounts
   for each row execute function public.set_updated_at();
 
