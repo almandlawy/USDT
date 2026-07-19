@@ -39,11 +39,11 @@ test.describe("public production smoke", () => {
     await expect(page).toHaveURL(/\/ar\/login/);
   });
 
-  test("dashboard and admin are protected", async ({ page }) => {
-    await page.goto("/ar/dashboard");
-    await expect(page).toHaveURL(/\/ar\/login/);
-    await page.goto("/ar/admin");
-    await expect(page).toHaveURL(/\/ar\/login|\/ar\/dashboard/);
+  test("dashboard and country payment admin routes are protected", async ({ page }) => {
+    for (const path of ["/ar/dashboard", "/ar/admin", "/ar/admin/payments/iraq", "/ar/admin/payments/uae"]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/ar\/login|\/ar\/dashboard/);
+    }
   });
 
   test("robots and sitemap reference production host and legal docs", async ({ request }) => {
