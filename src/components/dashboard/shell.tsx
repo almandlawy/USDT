@@ -61,6 +61,13 @@ export function DashboardShell({
     if (!admin || !allowedAdminSlugs) return true;
     return allowedAdminSlugs.includes(item.slug);
   });
+  const canManagePayments = admin && (!allowedAdminSlugs || allowedAdminSlugs.includes("payment-methods"));
+  const paymentCountryItems = canManagePayments
+    ? [
+        { key: "payments-iraq", Icon: CreditCard, href: `/${locale}/admin/payments/iraq`, label: locale === "ar" ? "مدفوعات العراق" : "Iraq payments" },
+        { key: "payments-uae", Icon: BadgeDollarSign, href: `/${locale}/admin/payments/uae`, label: locale === "ar" ? "مدفوعات الإمارات" : "UAE payments" },
+      ]
+    : [];
   const unread = formatUnreadBadge(unreadCount);
   const portalLabel = admin ? dict.admin.title : dict.dashboard.portal;
 
@@ -81,6 +88,11 @@ export function DashboardShell({
         <div className="workspaceLabel">{portalLabel}</div>
         <nav className="sideNav" onClick={() => setDrawerOpen(false)}>
           {navItems.map(({ key, Icon, href, label }) => (
+            <Link href={href} key={key} className={isActivePath(pathname, href) ? "active" : undefined} aria-current={isActivePath(pathname, href) ? "page" : undefined}>
+              <Icon size={18} /><span>{label}</span>
+            </Link>
+          ))}
+          {paymentCountryItems.map(({ key, Icon, href, label }) => (
             <Link href={href} key={key} className={isActivePath(pathname, href) ? "active" : undefined} aria-current={isActivePath(pathname, href) ? "page" : undefined}>
               <Icon size={18} /><span>{label}</span>
             </Link>
