@@ -7,6 +7,7 @@ import { requireStaff } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
 import { assertSameOrigin } from "@/lib/security/request";
 import { encryptAccountPayload } from "@/lib/payments/signed-instructions";
+import { canUseZainCashCheckout } from "@/lib/payments/flags";
 import type { Locale } from "@/lib/constants";
 
 export async function saveIraqPaymentAccountAction(formData: FormData) {
@@ -21,25 +22,35 @@ export async function saveIraqPaymentAccountAction(formData: FormData) {
   const supabase = await createClient();
   const { data: existing, error: existingError } = await supabase
     .from("country_payment_accounts")
-    .select("id,account_payload_encrypted,qr_storage_path")
+    .select("id,payment_method_code,account_payload_encrypted,qr_storage_path")
     .eq("id", id)
     .eq("country_code", "IQ")
     .single();
 
   if (existingError || !existing) redirect(`/${locale}/admin/payments/iraq?error=account_not_found`);
 
+  const requestedMode = String(formData.get("integrationMode") || "manual");
+  const apiRequested = requestedMode === "api";
+  if (apiRequested && existing.payment_method_code !== "zain_cash") {
+    redirect(`/${locale}/admin/payments/iraq?error=api_not_implemented`);
+  }
+  if (apiRequested && !canUseZainCashCheckout()) {
+    redirect(`/${locale}/admin/payments/iraq?error=zaincash_not_ready`);
+  }
+
+  const integrationMode = apiRequested ? "api" : "manual";
   const payloadRaw = String(formData.get("accountPayload") || "").trim();
   const enabled = formData.get("enabled") === "on";
   const hasStoredPaymentDetails = Boolean(existing.account_payload_encrypted || existing.qr_storage_path);
 
-  if (enabled && !payloadRaw && !hasStoredPaymentDetails) {
+  if (enabled && integrationMode === "manual" && !payloadRaw && !hasStoredPaymentDetails) {
     redirect(`/${locale}/admin/payments/iraq?error=missing_payment_details`);
   }
 
   const update: Record<string, unknown> = {
     display_name_ar: String(formData.get("displayNameAr") || "").trim(),
     display_name_en: String(formData.get("displayNameEn") || "").trim(),
-    integration_mode: String(formData.get("integrationMode") || "manual") === "api" ? "api" : "manual",
+    integration_mode: integrationMode,
     enabled,
     min_amount: formData.get("minAmount") ? Number(formData.get("minAmount")) : null,
     max_amount: formData.get("maxAmount") ? Number(formData.get("maxAmount")) : null,
