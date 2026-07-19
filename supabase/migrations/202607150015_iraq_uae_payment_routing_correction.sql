@@ -1,5 +1,5 @@
--- Corrective payment routing: Iraq methods only, signed instructions, company legal gates.
--- Does NOT unlock LIVE_TRADING or AUTO_FULFILLMENT.
+-- Corrective payment routing: Iraq/UAE methods, signed instructions, company legal gates.
+-- Does NOT unlock LIVE_TRADING, REAL_PAYMENTS, or AUTO_FULFILLMENT.
 
 -- Disable Stripe and generic manual_proof for Iraq; ensure FIB/SuperQi/Zain Cash/bank are preferred.
 update public.payment_method_availability pma
@@ -9,26 +9,26 @@ where pma.payment_method_id = pm.id
   and pma.country_code = 'IQ'
   and pm.code in ('stripe_card', 'manual_proof', 'eand_money', 'dupay', 'cash_representative', 'wallet_transfer');
 
--- Ensure Iraq matrix rows for FIB, SuperQi, Zain Cash, bank_transfer
+-- Ensure Iraq matrix rows exist, but keep them disabled until migration 016
+-- verifies a configured payment account and synchronizes availability.
 insert into public.payment_method_availability (
   payment_method_id, country_code, currency_code, enabled, min_amount, max_amount,
   percentage_fee, flat_fee, settlement_time_text_ar, settlement_time_text_en,
   requires_proof, requires_redirect, provider_approval_status, sort_order
 )
-select pm.id, 'IQ', 'IQD', true, seed.min_amount, seed.max_amount,
+select pm.id, 'IQ', 'IQD', false, seed.min_amount, seed.max_amount,
        0, 0, seed.settlement_ar, seed.settlement_en,
        true, false, 'not_required', seed.sort_order
 from public.payment_methods pm
 join (
   values
-    ('fib', 10000::numeric, 50000000::numeric, 'مراجعة إثبات أو API عند التفعيل', 'Proof review or API when enabled', 10),
-    ('superqi', 10000::numeric, 50000000::numeric, 'مراجعة إثبات أو API عند التفعيل', 'Proof review or API when enabled', 20),
-    ('zain_cash', 10000::numeric, 50000000::numeric, 'مراجعة إثبات أو API عند التفعيل', 'Proof review or API when enabled', 30),
+    ('fib', 10000::numeric, 50000000::numeric, 'مراجعة إثبات بعد التفعيل', 'Proof review once configured', 10),
+    ('superqi', 10000::numeric, 50000000::numeric, 'مراجعة إثبات بعد التفعيل', 'Proof review once configured', 20),
+    ('zain_cash', 10000::numeric, 50000000::numeric, 'مراجعة إثبات أو API الرسمي عند التفعيل', 'Proof review or official API once enabled', 30),
     ('bank_transfer', 50000::numeric, 100000000::numeric, 'مراجعة بشرية بعد التحويل العراقي', 'Human review after Iraqi bank transfer', 40)
 ) as seed(code, min_amount, max_amount, settlement_ar, settlement_en, sort_order)
   on pm.code = seed.code
 on conflict (payment_method_id, country_code, currency_code) do update set
-  enabled = true,
   min_amount = excluded.min_amount,
   max_amount = excluded.max_amount,
   settlement_time_text_ar = excluded.settlement_time_text_ar,
@@ -38,10 +38,11 @@ on conflict (payment_method_id, country_code, currency_code) do update set
   sort_order = excluded.sort_order,
   updated_at = now();
 
--- Activate FIB/SuperQi/Zain Cash/bank for Iraq routing (still no secrets public)
+-- Keep catalog entries available for configuration; public country availability
+-- is controlled separately and remains fail-closed.
 update public.payment_methods
 set active = true,
-    integration_mode = coalesce(integration_mode, 'manual'),
+    integration_mode = case when code in ('fib','superqi','bank_transfer') then 'manual' else coalesce(integration_mode, 'manual') end,
     requires_proof = true,
     updated_at = now()
 where code in ('fib', 'superqi', 'zain_cash', 'bank_transfer');
@@ -60,7 +61,7 @@ set name_ar = 'الإمارات العربية المتحدة',
     updated_at = now()
 where code = 'AE';
 
--- Primary selector: keep IQ/AE/OTHER enabled; others remain in DB for allowlist admin but not primary UX
+-- Primary selector: keep IQ/AE/OTHER ordered first; others remain available to the allowlist admin.
 update public.countries set sort_order = 10 where code = 'IQ';
 update public.countries set sort_order = 20 where code = 'AE';
 update public.countries set sort_order = 900 where code = 'OTHER';
@@ -72,7 +73,7 @@ create table if not exists public.country_payment_accounts (
   payment_method_code text not null,
   display_name_ar text not null,
   display_name_en text not null,
-  integration_mode text not null default 'manual' check (integration_mode in ('api', 'manual')),
+  integration_mode text not null default 'manual' check (integration_mode in ('api', 'manual', 'disabled')),
   enabled boolean not null default false,
   currency_code text not null,
   min_amount numeric(18,2),
@@ -95,35 +96,57 @@ create table if not exists public.country_payment_accounts (
   unique (country_code, payment_method_code, currency_code)
 );
 
+-- Repair an earlier partially-created table whose check allowed only api/manual.
+do $$
+declare
+  constr text;
+begin
+  for constr in
+    select conname
+    from pg_constraint
+    where conrelid = 'public.country_payment_accounts'::regclass
+      and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%integration_mode%'
+  loop
+    execute format('alter table public.country_payment_accounts drop constraint %I', constr);
+  end loop;
+
+  alter table public.country_payment_accounts
+    add constraint country_payment_accounts_integration_mode_check
+    check (integration_mode in ('api', 'manual', 'disabled'));
+end $$;
+
 create trigger country_payment_accounts_updated_at before update on public.country_payment_accounts
   for each row execute function public.set_updated_at();
 
+-- All rows are seeded disabled. Staff must add real account details or approved
+-- provider configuration before enabling them.
 insert into public.country_payment_accounts (
   country_code, payment_method_code, display_name_ar, display_name_en,
   integration_mode, enabled, currency_code, sort_order, instructions_ar, instructions_en
 ) values
-  ('IQ', 'fib', 'FIB', 'FIB', 'manual', true, 'IQD', 10,
+  ('IQ', 'fib', 'FIB', 'FIB', 'manual', false, 'IQD', 10,
    'بعد إنشاء الطلب ستظهر تعليمات FIB المرتبطة بطلبك فقط.',
    'After order creation, FIB instructions for your order only will appear.'),
-  ('IQ', 'superqi', 'SuperQi', 'SuperQi', 'manual', true, 'IQD', 20,
+  ('IQ', 'superqi', 'SuperQi', 'SuperQi', 'manual', false, 'IQD', 20,
    'بعد إنشاء الطلب ستظهر تعليمات SuperQi المرتبطة بطلبك فقط.',
    'After order creation, SuperQi instructions for your order only will appear.'),
-  ('IQ', 'zain_cash', 'زين كاش', 'Zain Cash', 'manual', true, 'IQD', 30,
+  ('IQ', 'zain_cash', 'زين كاش', 'Zain Cash', 'manual', false, 'IQD', 30,
    'بعد إنشاء الطلب ستظهر تعليمات زين كاش المرتبطة بطلبك فقط.',
    'After order creation, Zain Cash instructions for your order only will appear.'),
-  ('IQ', 'bank_transfer', 'تحويل بنكي عراقي', 'Iraqi Bank Transfer', 'manual', true, 'IQD', 40,
+  ('IQ', 'bank_transfer', 'تحويل بنكي عراقي', 'Iraqi Bank Transfer', 'manual', false, 'IQD', 40,
    'بعد إنشاء الطلب ستظهر بيانات التحويل البنكي العراقي لطلبك فقط.',
    'After order creation, Iraqi bank transfer details for your order only will appear.'),
   ('AE', 'stripe_card', 'Stripe', 'Stripe', 'disabled', false, 'AED', 10,
-   'Stripe يظهر فقط بعد الموافقة الرسمية على نشاط الأصول الرقمية.',
-   'Stripe appears only after official crypto business approval.'),
-  ('AE', 'eand_money', 'e& money', 'e& money', 'manual', true, 'AED', 20,
-   'وضع يدوي افتراضي — التعليمات بعد إنشاء الطلب.',
-   'Manual by default — instructions after order creation.'),
-  ('AE', 'dupay', 'du Pay', 'du Pay', 'manual', true, 'AED', 30,
-   'وضع يدوي افتراضي — بلا ادعاء شراكة.',
-   'Manual by default — no partnership claim.'),
-  ('AE', 'bank_transfer', 'تحويل بنكي إماراتي', 'UAE Bank Transfer', 'manual', true, 'AED', 40,
+   'Stripe يظهر فقط بعد اكتمال مفاتيح الإنتاج وWebhook وموافقة النشاط.',
+   'Stripe appears only after production keys, webhook, and business approval are complete.'),
+  ('AE', 'eand_money', 'e& money', 'e& money', 'manual', false, 'AED', 20,
+   'وضع يدوي — التعليمات بعد إنشاء الطلب.',
+   'Manual route — instructions appear after order creation.'),
+  ('AE', 'dupay', 'du Pay', 'du Pay', 'manual', false, 'AED', 30,
+   'وضع يدوي — بلا ادعاء شراكة أو API.',
+   'Manual route — no partnership or API claim.'),
+  ('AE', 'bank_transfer', 'تحويل بنكي إماراتي', 'UAE Bank Transfer', 'manual', false, 'AED', 40,
    'تعليمات التحويل البنكي الإماراتي تظهر بعد إنشاء الطلب.',
    'UAE bank transfer instructions appear after order creation.')
 on conflict (country_code, payment_method_code, currency_code) do update set
