@@ -76,7 +76,8 @@ begin
         requires_redirect = case when new.integration_mode = 'api' then true else false end,
         provider_approval_status = case
           when new.integration_mode = 'disabled' then 'disabled'
-          when new.integration_mode = 'api' then 'approved'
+          when new.integration_mode = 'api' and effective_enabled then 'approved'
+          when new.integration_mode = 'api' then 'pending'
           else 'not_required'
         end,
         sort_order = new.sort_order,
