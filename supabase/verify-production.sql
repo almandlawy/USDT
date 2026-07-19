@@ -35,12 +35,48 @@ with checks as (
   union all
   select 'country_payment_methods_public_exists', to_regclass('public.country_payment_methods_public') is not null
   union all
+  select 'payment_account_mode_constraint_allows_disabled',
+         exists (
+           select 1
+           from pg_constraint
+           where conrelid = 'public.country_payment_accounts'::regclass
+             and contype = 'c'
+             and pg_get_constraintdef(oid) ilike '%integration_mode%'
+             and pg_get_constraintdef(oid) ilike '%disabled%'
+         )
+  union all
+  select 'payment_account_enforcement_trigger_exists',
+         exists (
+           select 1
+           from pg_trigger
+           where tgname = 'enforce_country_payment_account_ready'
+             and not tgisinternal
+         )
+  union all
   select 'payment_account_sync_trigger_exists',
          exists (
            select 1
            from pg_trigger
            where tgname = 'sync_country_payment_account_availability'
              and not tgisinternal
+         )
+  union all
+  select 'no_empty_enabled_manual_accounts',
+         not exists (
+           select 1
+           from public.country_payment_accounts
+           where enabled = true
+             and integration_mode = 'manual'
+             and coalesce(account_payload_encrypted, '') = ''
+             and coalesce(qr_storage_path, '') = ''
+         )
+  union all
+  select 'no_unsupported_api_accounts',
+         not exists (
+           select 1
+           from public.country_payment_accounts
+           where integration_mode = 'api'
+             and payment_method_code not in ('stripe_card', 'zain_cash')
          )
   union all
   select 'kyc_customer_reason_column',
@@ -96,4 +132,20 @@ from (
   select to_regclass('public.data_requests') is not null
   union all
   select to_regprocedure('public.require_staff_aal2()') is not null
+  union all
+  select exists (select 1 from pg_trigger where tgname = 'enforce_country_payment_account_ready' and not tgisinternal)
+  union all
+  select not exists (
+    select 1 from public.country_payment_accounts
+    where enabled = true
+      and integration_mode = 'manual'
+      and coalesce(account_payload_encrypted, '') = ''
+      and coalesce(qr_storage_path, '') = ''
+  )
+  union all
+  select not exists (
+    select 1 from public.country_payment_accounts
+    where integration_mode = 'api'
+      and payment_method_code not in ('stripe_card', 'zain_cash')
+  )
 ) s;
