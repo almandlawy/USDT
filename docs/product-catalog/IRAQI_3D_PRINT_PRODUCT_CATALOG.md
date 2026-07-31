@@ -778,4 +778,13 @@
 
 ## الملفات المصورة (أفضل 3)
 
-انظر المجلد: `docs/product-catalog/renders/` و`/opt/cursor/artifacts/iraqi-3d-products/`
+المجلد: `docs/product-catalog/renders/`  
+ملاحظات STL: [`TOP3_STL_REVISION_NOTES.md`](./TOP3_STL_REVISION_NOTES.md)
+
+| المنتج | أمامي/جانبي/علوي/منظور | Exploded | أثناء الاستخدام |
+|---|---|---|---|
+| دوّامة بوابة عشتار | `01-ishtar-spinner-orthographic.png` | `01-ishtar-spinner-exploded.png` | `01-ishtar-spinner-in-use.png` |
+| منظم شناشيل | `02-shanasheel-hub-orthographic.png` | `02-shanasheel-hub-exploded.png` | `02-shanasheel-hub-in-use.png` |
+| مشبك كابل الملوية بالاسم | `03-malwiya-cable-clip-orthographic.png` | `03-malwiya-cable-clip-exploded.png` | `03-malwiya-cable-clip-in-use.png` |
+
+**تنبيه:** الصور تصور مفاهيمية CAD وليست ملف STL نهائي. راجع تعديلات ما قبل التصدير في `TOP3_STL_REVISION_NOTES.md`.
